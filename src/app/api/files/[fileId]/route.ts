@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
+import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
 
 interface RouteParams {
   params: { fileId: string }
@@ -18,8 +17,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const serverSupabase = createServerSupabaseClient()
+
     // Get partner profile
-    const { data: partnerProfile, error: partnerError } = await supabase
+    const { data: partnerProfile, error: partnerError } = await serverSupabase
       .from('partner_profiles')
       .select('id')
       .eq('user_id', user.id)
@@ -44,7 +45,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get the application to find the file
-    const { data: application, error: appError } = await supabase
+    const { data: application, error: appError } = await serverSupabase
       .from('loan_applications')
       .select('income_documents, bank_statements')
       .eq('id', applicationId)
@@ -78,7 +79,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Delete file from storage
-      const { error: storageError } = await supabase.storage
+      const { error: storageError } = await serverSupabase.storage
         .from('loan-documents')
       .remove([fileToDelete.path])
 
@@ -98,7 +99,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       updateData.bank_statements = updatedDocuments
     }
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await serverSupabase
       .from('loan_applications')
       .update(updateData)
       .eq('id', applicationId)

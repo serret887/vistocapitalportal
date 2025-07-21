@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
+import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
 import type { DashboardStats, LoanApplicationStatus } from '@/types'
 
 // GET /api/dashboard/stats - Get dashboard statistics
@@ -15,8 +14,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const serverSupabase = createServerSupabaseClient()
+
     // Get partner profile
-    const { data: partnerProfile, error: partnerError } = await supabase
+    const { data: partnerProfile, error: partnerError } = await serverSupabase
       .from('partner_profiles')
       .select('id')
       .eq('user_id', user.id)
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get application counts by status
-    const { data: statusCounts, error: statsError } = await supabase
+    const { data: statusCounts, error: statsError } = await serverSupabase
       .from('loan_applications')
       .select('status')
       .eq('partner_id', partnerProfile.id)

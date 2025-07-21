@@ -40,7 +40,7 @@ export interface PartnerProfile {
 }
 
 // Create a server-side Supabase client for API routes
-function createServerSupabaseClient() {
+export function createServerSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
   
@@ -73,26 +73,7 @@ export async function getCurrentUserFromRequest(request: NextRequest) {
       return { user: null, error: error || new Error('Invalid token') }
     }
 
-    // Get partner profile data (now includes user info)
-    const { data: profile, error: profileError } = await serverSupabase
-      .from('partner_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError) {
-      console.error('Error fetching partner profile:', profileError)
-      return { user: null, error: profileError }
-    }
-
-    const userData: User = {
-      id: user.id,
-      email: profile.email,
-      firstName: profile.first_name,
-      lastName: profile.last_name,
-    }
-
-    return { user: userData, error: null }
+    return { user: user, error: null }
   } catch (error) {
     console.error('Error getting current user from request:', error)
     return { user: null, error: error as Error }

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
+import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
 import type { LoanApplicationFormData } from '@/types'
 
 // GET /api/applications - Get all applications for the current partner
@@ -15,8 +14,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const serverSupabase = createServerSupabaseClient()
+
     // Get partner profile
-    const { data: partnerProfile, error: partnerError } = await supabase
+    const { data: partnerProfile, error: partnerError } = await serverSupabase
       .from('partner_profiles')
       .select('id')
       .eq('user_id', user.id)
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all applications for this partner
-    const { data: applications, error } = await supabase
+    const { data: applications, error } = await serverSupabase
       .from('loan_applications')
       .select('*')
       .eq('partner_id', partnerProfile.id)
@@ -70,8 +71,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const serverSupabase = createServerSupabaseClient()
+    
     // Get partner profile
-    const { data: partnerProfile, error: partnerError } = await supabase
+    const { data: partnerProfile, error: partnerError } = await serverSupabase
       .from('partner_profiles')
       .select('id')
       .eq('user_id', user.id)
@@ -95,13 +98,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the application
-    const { data: application, error } = await supabase
+    const { data: application, error } = await serverSupabase
       .from('loan_applications')
       .insert({
-      partner_id: partnerProfile.id,
-      first_name: formData.first_name,
-      last_name: formData.last_name,
-      email: formData.email,
+        partner_id: partnerProfile.id,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
         phone_number: formData.phone_number,
         property_address: formData.property_address,
         property_is_tbd: formData.property_is_tbd,
@@ -115,7 +118,7 @@ export async function POST(request: NextRequest) {
         income_sources: formData.income_sources,
         total_assets: formData.total_assets,
         bank_accounts: formData.bank_accounts,
-      status: 'in_review'
+        status: 'in_review'
       })
       .select()
       .single()

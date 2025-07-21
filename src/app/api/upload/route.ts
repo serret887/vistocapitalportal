@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
+import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = [
@@ -23,8 +22,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const serverSupabase = createServerSupabaseClient()
+
     // Get partner profile
-    const { data: partnerProfile, error: partnerError } = await supabase
+    const { data: partnerProfile, error: partnerError } = await serverSupabase
       .from('partner_profiles')
       .select('id')
       .eq('user_id', user.id)
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     const filePath = `${partnerProfile.id}/${fileName}`
 
     // Upload file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await serverSupabase.storage
       .from('loan-documents')
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get public URL
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = serverSupabase.storage
       .from('loan-documents')
       .getPublicUrl(filePath)
 
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
     // If application ID is provided, update the application's documents
     if (applicationId) {
       // Get current application
-      const { data: application, error: appError } = await supabase
+      const { data: application, error: appError } = await serverSupabase
           .from('loan_applications')
         .select('income_documents, bank_statements')
           .eq('id', applicationId)
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
         updateData.bank_statements = [...(application.bank_statements || []), fileRecord]
       }
 
-        const { error: updateError } = await supabase
+        const { error: updateError } = await serverSupabase
           .from('loan_applications')
         .update(updateData)
           .eq('id', applicationId)

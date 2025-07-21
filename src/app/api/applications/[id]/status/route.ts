@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest } from '@/lib/auth'
-import { supabase } from '@/lib/supabase'
+import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
 import type { LoanApplicationStatus } from '@/types'
 
 interface RouteParams {
@@ -19,8 +18,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       )
     }
 
+    const serverSupabase = createServerSupabaseClient()
+
     // Get partner profile
-    const { data: partnerProfile, error: partnerError } = await supabase
+    const { data: partnerProfile, error: partnerError } = await serverSupabase
       .from('partner_profiles')
       .select('id')
       .eq('user_id', user.id)
@@ -54,7 +55,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Update the application status
-    const { error } = await supabase
+    const { error } = await serverSupabase
       .from('loan_applications')
       .update({ status })
       .eq('id', params.id)
