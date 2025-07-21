@@ -1,315 +1,204 @@
-# 🚀 Full-Stack Debugging Guide
+# 🐛 Full-Stack Debugging Guide
 
-### Visto Capital Partner Portal - VS Code Debug Configurations
+## VS Code Debug Configurations
 
-## 🎯 **Quick Start**
+Your project now includes comprehensive debugging configurations for Next.js + Supabase development.
 
-### **1. Simple Full-Stack Debugging**
+### 🎯 **Available Debug Configurations**
 
-Press `F5` and select **"🚀 Debug Next.js (Full-Stack)"** to start debugging your entire application.
+#### **1. 🚀 Debug Next.js (Client + Server)**
+- **Purpose**: Debug both client and server-side code
+- **Port**: 3001 (configured to avoid conflicts)
+- **Best for**: API routes, server components, SSR debugging
+- **Auto-opens**: Browser when server is ready
 
-### **2. Advanced Debugging Options**
+#### **2. 🌐 Debug Next.js Client-Side**
+- **Purpose**: Debug React components, client-side logic
+- **Browser**: Chrome with source maps
+- **Best for**: Component logic, hooks, client-side state management
+- **Features**: React DevTools compatible
 
-Use `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac) → "Debug: Select and Start Debugging" to choose from all available configurations.
+#### **3. 🔧 Debug Next.js Server-Side Only**
+- **Purpose**: Focus only on server-side debugging
+- **Best for**: API routes, middleware, server components
+- **Performance**: Lighter than full-stack debugging
 
----
-
-## 🛠️ **Available Debug Configurations**
-
-### **🚀 Debug Next.js (Full-Stack)**
-
-- **Purpose**: Complete Next.js application debugging
-- **Port**: 3001 (avoiding conflicts)
-- **Features**:
-  - Server-side React components
-  - API routes debugging
-  - Environment variables loaded
-  - Auto-opens browser when ready
-- **Use Case**: General development and debugging
-
-### **🌐 Debug Next.js Client-Side**
-
-- **Purpose**: Browser-based React component debugging
-- **Features**:
-  - Chrome DevTools integration
-  - React component state inspection
-  - Client-side JavaScript debugging
-  - Source map support
-- **Use Case**: Frontend components, hooks, client-side logic
-
-### **🛠️ Debug Next.js Server-Side**
-
-- **Purpose**: Dedicated server-side debugging
-- **Features**:
-  - API routes debugging
-  - Server components
-  - Database operations
-  - Supabase integration debugging
-- **Use Case**: Backend API development, server-side rendering
-
-### **🗄️ Debug Supabase Functions**
-
+#### **4. 🗄️ Debug Supabase Functions**
 - **Purpose**: Debug Supabase Edge Functions
-- **Features**:
-  - Local Supabase function debugging
-  - Database trigger debugging
-  - Edge function development
-- **Use Case**: Custom Supabase functions, webhooks
+- **Environment**: Local Supabase with proper env vars
+- **Best for**: Database functions, auth logic, custom endpoints
 
-### **🧪 Debug Jest Tests**
+#### **5. 🧪 Debug Jest Tests**
+- **Purpose**: Debug unit and integration tests
+- **Features**: Run tests in debug mode with breakpoints
+- **Coverage**: Disabled for better debugging experience
 
-- **Purpose**: Unit and integration test debugging
-- **Features**:
-  - Breakpoints in test files
-  - Component testing debugging
-  - API testing
-- **Use Case**: Test-driven development
+#### **6. 🔍 Debug Specific Test File**
+- **Purpose**: Debug a single test file
+- **Usage**: Open test file, then run this configuration
+- **Best for**: Isolated test debugging
 
-### **📱 Debug Mobile (Chrome DevTools)**
+#### **7. 📱 Debug Mobile (Chrome DevTools)**
+- **Purpose**: Debug mobile responsive behavior
+- **Features**: Chrome mobile simulation with debugging
+- **Best for**: Mobile-specific issues, responsive design
 
-- **Purpose**: Mobile viewport debugging
-- **Features**:
-  - iPhone user agent simulation
-  - Mobile-responsive debugging
-  - Touch event debugging
-- **Use Case**: Mobile UI development
+### 🔥 **Compound Configurations** (Multiple debuggers at once)
 
----
+#### **🎯 Debug Full-Stack (Client + Server)**
+- Runs: Next.js Server + Chrome Client debugging
+- **Best for**: End-to-end debugging of user flows
 
-## 🎯 **Compound Configurations** (Multiple Debuggers)
+#### **🔥 Debug Complete Stack (Next.js + Supabase)**
+- Runs: Next.js Server + Supabase Functions
+- **Best for**: Full backend debugging including database operations
 
-### **🎯 Debug Full-Stack (Client + Server)**
+## 🛠️ **How to Use**
 
-**Starts**: Next.js Full-Stack + Client-Side Chrome debugger
-**Best for**: Complete application debugging with browser inspection
+### **Step 1: Start Supabase (if needed)**
+```bash
+npx supabase start
+```
 
-### **🔥 Debug Complete Stack (Next.js + Supabase)**
+### **Step 2: Choose Debug Configuration**
+1. Open VS Code Command Palette (`Cmd/Ctrl + Shift + P`)
+2. Type "Debug: Select and Start Debugging"
+3. Choose your configuration
+4. Or use the Debug panel (F5)
 
-**Starts**: Next.js Full-Stack + Supabase Functions
-**Best for**: Full backend debugging including custom functions
+### **Step 3: Set Breakpoints**
+- Click in the gutter next to line numbers
+- Or use `F9` to toggle breakpoints
+- Breakpoints work in:
+  - Server-side code (API routes, components)
+  - Client-side code (React components, hooks)
+  - Tests (Jest test files)
+  - Supabase functions
 
-### **🧪 Debug with Tests**
+### **Step 4: Debug**
+- **F5**: Start debugging
+- **F10**: Step over
+- **F11**: Step into
+- **Shift+F11**: Step out
+- **F6**: Pause
+- **Shift+F5**: Stop debugging
 
-**Starts**: Next.js Full-Stack + Jest Tests
-**Best for**: Test-driven development workflow
+## 🎯 **Debugging Specific Scenarios**
 
----
-
-## 📋 **How to Use Each Configuration**
-
-### **🚀 For General Development**
-
-1. Press `F5`
-2. Select "🚀 Debug Next.js (Full-Stack)"
-3. Set breakpoints in any `.tsx`, `.ts`, or API route files
-4. Application opens automatically at http://localhost:3001
-
-### **🌐 For Frontend Component Debugging**
-
-1. Start "🚀 Debug Next.js (Full-Stack)" first
-2. Then start "🌐 Debug Next.js Client-Side"
-3. Set breakpoints in React components
-4. Use Chrome DevTools for state inspection
-
-### **🛠️ For API/Backend Debugging**
-
-1. Use "🛠️ Debug Next.js Server-Side"
+### **🔍 Debugging Onboarding Flow**
+1. Use **"🎯 Debug Full-Stack"** configuration
 2. Set breakpoints in:
-   - `src/app/api/*/route.ts` files
-   - `src/lib/auth.ts`
-   - `src/lib/supabase.ts`
-   - Any server-side utilities
+   - `src/components/steps/Step*.tsx` (client-side)
+   - `src/contexts/OnboardingContext.tsx` (state management)
+   - `src/lib/auth.ts` (authentication logic)
+3. Test signup flow at `http://localhost:3001/signup`
 
-### **🗄️ For Database/Supabase Debugging**
+### **🗄️ Debugging Database Operations**
+1. Use **"🗄️ Debug Supabase Functions"** configuration
+2. Set breakpoints in:
+   - `src/lib/auth.ts` (auth functions)
+   - `src/lib/supabase.ts` (database client)
+3. Check Supabase Studio at `http://127.0.0.1:54323`
 
-1. Use "🗄️ Debug Supabase Functions"
-2. Create functions in `supabase/functions/`
-3. Set breakpoints in edge functions
-4. Debug database triggers and webhooks
+### **🎨 Debugging UI Components**
+1. Use **"🌐 Debug Next.js Client-Side"** configuration
+2. Set breakpoints in:
+   - Component render methods
+   - Event handlers
+   - useEffect hooks
+   - State updates
+3. Use React DevTools in Chrome
 
-### **📱 For Mobile Development**
+### **📱 Debugging Mobile Experience**
+1. Use **"📱 Debug Mobile"** configuration
+2. Chrome will open in mobile simulation mode
+3. Test responsive design and touch interactions
 
-1. Use "📱 Debug Mobile (Chrome DevTools)"
-2. Test responsive design
-3. Debug touch interactions
-4. Validate mobile-specific features
+### **🧪 Debugging Tests**
+1. Open test file in VS Code
+2. Use **"🔍 Debug Specific Test File"** for single file
+3. Or **"🧪 Debug Jest Tests"** for all tests
+4. Set breakpoints in test code and implementation
 
----
+## 🔧 **Debugging Configuration Details**
 
-## 🎯 **Debugging Specific Components**
+### **Environment Variables**
+- All configurations use your `.env.local` file
+- Supabase configs include local development URLs
+- NODE_ENV set to "development" for proper debugging
 
-### **Authentication Flow**
+### **Source Maps**
+- TypeScript source maps enabled
+- React component debugging supported
+- Server-side debugging with full stack traces
 
-```typescript
-// Set breakpoints in:
-src/components/signup-form.tsx       // Signup form submission
-src/components/login-form.tsx        // Login form submission
-src/lib/auth.ts                      // Auth utility functions
-src/app/api/auth/*/route.ts          // Auth API routes (if any)
-```
+### **Performance Optimizations**
+- Node modules excluded from debugging
+- Source map resolution optimized
+- Skip files configured for cleaner debugging
 
-### **Onboarding Flow**
+### **Browser Settings**
+- Chrome security disabled for local development
+- Custom user data directory for debugging
+- Remote debugging port configured
 
-```typescript
-// Set breakpoints in:
-src/contexts/OnboardingContext.tsx   // Form state management
-src/components/steps/*.tsx           // Individual step components
-src/app/onboarding/page.tsx         // Main onboarding page
-```
-
-### **Database Operations**
-
-```typescript
-// Set breakpoints in:
-src / lib / supabase.ts; // Supabase client
-src / lib / auth.ts; // Profile operations
-src / app / api / health / route.ts; // Database connectivity
-```
-
-### **UI Components**
-
-```typescript
-// Set breakpoints in:
-src / components / ui;
-/*.tsx             // Shadcn/UI components
-src/components/*.tsx                // Custom components
-src/app/*/ page.tsx; // Page components
-```
-
----
-
-## 🔧 **Advanced Debugging Tips**
-
-### **1. Environment Variables**
-
-- All configurations automatically load `.env.local`
-- Check values in debugger: `process.env.NEXT_PUBLIC_SUPABASE_URL`
-
-### **2. Network Requests**
-
-- Use Chrome DevTools Network tab during client-side debugging
-- Monitor Supabase API calls
-- Inspect request/response headers
-
-### **3. Database Debugging**
-
-- Use Supabase Studio: http://127.0.0.1:54323
-- Set breakpoints in auth utility functions
-- Monitor SQL queries in Supabase logs
-
-### **4. React State Debugging**
-
-- Use React DevTools browser extension
-- Set breakpoints in `useState` and `useEffect`
-- Inspect component props and state
-
-### **5. Form Debugging**
-
-- Set breakpoints in form submission handlers
-- Use browser DevTools to inspect form data
-- Debug validation logic step by step
-
----
-
-## ⚡ **Quick Debugging Shortcuts**
-
-### **VS Code Shortcuts**
-
-- `F5` - Start debugging
-- `F9` - Toggle breakpoint
-- `F10` - Step over
-- `F11` - Step into
-- `Shift+F11` - Step out
-- `Ctrl+Shift+F5` - Restart debugger
-
-### **Chrome DevTools Shortcuts**
-
-- `F12` - Open DevTools
-- `Ctrl+Shift+C` - Inspect element
-- `Ctrl+Shift+J` - Open Console
-- `Ctrl+Shift+I` - Open DevTools
-
----
-
-## 🚨 **Troubleshooting**
+## 📋 **Troubleshooting**
 
 ### **Port Conflicts**
+- Next.js configured for port 3001 (avoiding 3000 conflicts)
+- Supabase uses standard ports (54321, 54322, 54323)
+- Chrome debugging uses port 9222
 
-If port 3001 is busy:
+### **Source Maps Not Working**
+1. Ensure TypeScript is configured correctly
+2. Check that `.next` folder is regenerated
+3. Clear browser cache and restart debugging
 
-1. Change port in launch configurations
-2. Update health check URL
-3. Restart debugging
-
-### **Breakpoints Not Working**
-
-1. Ensure source maps are enabled
-2. Check file paths in configurations
-3. Restart debugger with `Ctrl+Shift+F5`
-
-### **Environment Variables Not Loading**
-
-1. Verify `.env.local` exists
-2. Check `envFile` path in launch configuration
-3. Restart VS Code
+### **Breakpoints Not Hitting**
+1. Verify you're in the correct debugging configuration
+2. Check that files are properly saved
+3. Ensure source maps are generated
 
 ### **Supabase Connection Issues**
+1. Verify Supabase is running: `npx supabase status`
+2. Check `.env.local` has correct URLs
+3. Ensure database is migrated: `npx supabase db reset`
 
-1. Ensure Supabase is running: `npx supabase status`
-2. Check health endpoint: http://localhost:3001/api/health
-3. Verify environment variables
+## 🏆 **Pro Tips**
 
----
+### **Multiple Debug Sessions**
+- You can run multiple configurations simultaneously
+- Use compound configurations for complex debugging scenarios
+- Each debugger has its own console and variables panel
 
-## 🎯 **Best Practices**
+### **Debug Console**
+- Use the Debug Console to execute JavaScript expressions
+- Access to all variables in current scope
+- Can modify variables during debugging
 
-### **1. Start Simple**
+### **Conditional Breakpoints**
+- Right-click on breakpoint → Add Condition
+- Only breaks when condition is true
+- Great for debugging loops or specific scenarios
 
-- Begin with "🚀 Debug Next.js (Full-Stack)"
-- Add client-side debugging when needed
-- Use compound configurations for complex scenarios
+### **Call Stack Navigation**
+- Click on any frame in call stack to navigate
+- See variable values at each frame level
+- Understand execution flow through your app
 
-### **2. Strategic Breakpoints**
+### **Variable Inspection**
+- Hover over variables to see values
+- Use Variables panel for detailed inspection
+- Watch expressions for monitoring specific values
 
-- Set breakpoints at function entry points
-- Debug API routes before client-side code
-- Use conditional breakpoints for specific scenarios
+## 🎉 **Happy Debugging!**
 
-### **3. Development Workflow**
+This setup provides comprehensive debugging capabilities for your Next.js + Supabase application. You can now debug:
+- Frontend React components and logic
+- Backend API routes and server components
+- Database operations and Supabase functions
+- Authentication flows
+- Mobile responsive behavior
+- Unit and integration tests
 
-1. Start debugging configuration
-2. Set breakpoints in relevant files
-3. Trigger the functionality (click button, submit form)
-4. Step through code to understand flow
-5. Use Console for quick variable inspection
-
-### **4. Performance Debugging**
-
-- Use Chrome DevTools Performance tab
-- Monitor React re-renders
-- Check network request timing
-- Profile component load times
-
----
-
-## 🏆 **Ready to Debug!**
-
-Your Visto Capital Partner Portal now has:
-
-- ✅ **6 specialized debug configurations**
-- ✅ **3 compound debugging setups**
-- ✅ **Optimized VS Code settings**
-- ✅ **Full source map support**
-- ✅ **Environment variable integration**
-- ✅ **Chrome DevTools integration**
-
-### **🚀 Start Debugging:**
-
-1. Press `F5` to begin
-2. Choose your debugging configuration
-3. Set breakpoints where needed
-4. Happy debugging! 🐛➡️✨
-
----
-
-_Need help? Check the health endpoint at http://localhost:3001/api/health to verify all systems are working correctly._
+Choose the appropriate configuration based on what you're debugging, and leverage VS Code's powerful debugging features to build your application more efficiently! 

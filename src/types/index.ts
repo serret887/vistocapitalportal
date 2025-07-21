@@ -1,0 +1,238 @@
+// Partner Types
+export type PartnerTypeValue = 'wholesaler' | 'investor' | 'real_estate_agent' | 'marketing_partner'
+export type PartnerType = 'Wholesaler' | 'Investor' | 'Real Estate Agent' | 'Marketing Partner'
+
+export const PARTNER_TYPES: PartnerType[] = [
+  'Wholesaler',
+  'Investor', 
+  'Real Estate Agent',
+  'Marketing Partner'
+]
+
+export interface PartnerProfile {
+  id: string
+  user_id: string
+  partner_type: string
+  phone_number?: string
+  monthly_deal_volume?: number
+  transaction_volume?: number
+  transaction_types: string[]
+  license_number?: string
+  license_state?: string
+  onboarded: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface OnboardingFormData {
+  partner_type: string
+  phone_number: string
+  monthly_deal_volume: number
+  transaction_volume: number
+  transaction_types: string[]
+  license_number?: string
+  license_state?: string
+}
+
+// Transaction Types
+export type TransactionType = 'Fix and Flip' | 'Long Term Rental' | 'Home Owners' | 'Multifamily' | 'Commercial Properties'
+
+export const TRANSACTION_TYPES: TransactionType[] = [
+  'Fix and Flip',
+  'Long Term Rental',
+  'Home Owners',
+  'Multifamily',
+  'Commercial Properties'
+]
+
+// US States for select dropdowns
+export const US_STATES = [
+  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 
+  'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 
+  'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 
+  'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 
+  'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 
+  'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 
+  'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 
+  'Wisconsin', 'Wyoming'
+]
+
+// Phase 2: Enhanced Loan Application Types
+export type LoanApplicationStatus = 
+  | 'in_review' 
+  | 'approved' 
+  | 'ineligible' 
+  | 'denied' 
+  | 'closed' 
+  | 'missing_conditions'
+  | 'pending_documents'
+
+export const LOAN_STATUS_LABELS: Record<LoanApplicationStatus, string> = {
+  'in_review': 'In Review',
+  'approved': 'Approved',
+  'ineligible': 'Ineligible', 
+  'denied': 'Denied',
+  'closed': 'Closed',
+  'missing_conditions': 'Missing Conditions',
+  'pending_documents': 'Pending Documents'
+}
+
+// Updated colors to use Visto Capital brand palette with neutral status colors
+export const LOAN_STATUS_COLORS: Record<LoanApplicationStatus, string> = {
+  'in_review': 'bg-blue-50 text-blue-800 border-blue-200',
+  'approved': 'bg-green-50 text-green-800 border-green-200',
+  'ineligible': 'bg-gray-50 text-gray-700 border-gray-200',
+  'denied': 'bg-red-50 text-red-800 border-red-200',
+  'closed': 'bg-purple-50 text-purple-800 border-purple-200',
+  'missing_conditions': 'bg-yellow-50 text-yellow-800 border-yellow-200',
+  'pending_documents': 'bg-orange-50 text-orange-800 border-orange-200'
+}
+
+// Simplified Loan Application Types
+export type LoanObjective = 'refi' | 'purchase'
+
+export const LOAN_OBJECTIVES: { value: LoanObjective; label: string }[] = [
+  { value: 'refi', label: 'Refinance' },
+  { value: 'purchase', label: 'Purchase' }
+]
+
+// Simplified loan types based on objective
+export const REFI_LOAN_TYPES = [
+  { value: 'dscr', label: 'DSCR (Debt Service Coverage Ratio)' },
+  { value: 'homeowner', label: 'Home Owner' }
+]
+
+export const PURCHASE_LOAN_TYPES = [
+  { value: 'dscr', label: 'DSCR (Debt Service Coverage Ratio)' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'homeowner', label: 'Home Owner' }
+]
+
+// Income Types for Home Owner Loans
+export type IncomeSourceType = 'w2' | 'self_employed' | 'alimony' | 'ssn' | 'company'
+export type IncomeDocumentType = 'w2' | 'self_employed' | 'alimony' | 'ssn' | 'company' | '1040_tax_return'
+
+export const INCOME_SOURCE_TYPES: { value: IncomeSourceType; label: string }[] = [
+  { value: 'w2', label: 'W-2 (Employment Income)' },
+  { value: 'self_employed', label: '1099 (Contract/Freelance Income)' },
+  { value: 'alimony', label: 'Alimony/Child Support' },
+  { value: 'ssn', label: 'Social Security/Disability' },
+  { value: 'company', label: 'Business/Company Income' }
+]
+
+export interface IncomeSource {
+  id: string
+  type: IncomeSourceType
+  amount: number
+  description: string
+}
+
+export interface IncomeDocument {
+  id: string
+  document_type: IncomeDocumentType
+  file_name: string
+  file_size: number
+  file_url?: string
+  income_source_id?: string // Links to IncomeSource (null for 1040 tax return)
+  uploaded_at: string
+}
+
+export interface BankAccount {
+  id: string
+  bank_name: string
+  account_type: 'checking' | 'savings' | 'money_market' | 'cd' | 'investment'
+  balance: number
+  statement_months: number
+}
+
+export interface BankStatement {
+  id: string
+  account_id: string
+  month: string // Format: YYYY-MM
+  file_url: string
+  file_name: string
+  uploaded_at: string
+}
+
+export interface LoanApplication {
+  id: string
+  partner_id: string
+  
+  // Personal Info (Required)
+  first_name: string
+  last_name: string
+  email?: string
+  phone_number?: string
+  ssn?: string
+  date_of_birth?: string
+  
+  // Property Info
+  property_address?: string
+  property_is_tbd: boolean
+  property_type?: string
+  current_residence?: string
+  
+  // Simplified Loan Information
+  loan_objective?: LoanObjective
+  loan_type?: string
+  
+  // Income Information (for homeowner loans)
+  total_income: number
+  income_sources: IncomeSource[]
+  income_documents: IncomeDocument[]
+  
+  // Assets Information
+  total_assets: number
+  bank_accounts: BankAccount[]
+  bank_statements: BankStatement[]
+  
+  // Application status
+  status: LoanApplicationStatus
+  
+  // Timestamps
+  created_at: string
+  updated_at: string
+}
+
+export interface LoanApplicationFormData {
+  // Personal Info
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  
+  // Property Info
+  property_address: string
+  property_is_tbd: boolean
+  property_type: string
+  current_residence: string
+  
+  // Simplified Loan Information
+  loan_objective: LoanObjective | ''
+  loan_type: string
+  
+  // Personal Details
+  ssn: string
+  date_of_birth: string
+  
+  // Income Information (for homeowner loans)
+  total_income: number
+  income_sources: IncomeSource[]
+  income_documents: File[]
+  
+  // Assets
+  total_assets: number
+  bank_accounts: BankAccount[]
+  bank_statements: File[]
+}
+
+export interface DashboardStats {
+  in_review: number
+  approved: number
+  ineligible: number
+  denied: number
+  closed: number
+  missing_conditions: number
+  pending_documents: number
+  total: number
+} 

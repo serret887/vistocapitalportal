@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "🚀 Debug Next.js",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/partner-onboarding-portal/node_modules/.bin/next",
+      "args": ["dev"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/partner-onboarding-portal",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ]
+}

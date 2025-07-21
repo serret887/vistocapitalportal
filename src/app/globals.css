@@ -1,0 +1,195 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Visto Capital Brand Colors */
+  --color-visto-gold: #C99C48;
+  --color-visto-dark-gold: #946832;
+  --color-visto-dark-blue: #19232D;
+  --color-visto-slate: #69707C;
+  --color-visto-light: #F9FAFB;
+}
+
+:root {
+  --radius: 0.75rem; /* Slightly more rounded for premium feel */
+  
+  /* Visto Capital Light Theme */
+  --background: #F9FAFB; /* Off-white background */
+  --foreground: #19232D; /* Dark blue for text */
+  --card: #FFFFFF; /* Pure white cards */
+  --card-foreground: #19232D;
+  --popover: #FFFFFF;
+  --popover-foreground: #19232D;
+  --primary: #C99C48; /* Visto Gold */
+  --primary-foreground: #FFFFFF;
+  --secondary: #F3F4F6; /* Light gray */
+  --secondary-foreground: #19232D;
+  --muted: #F3F4F6;
+  --muted-foreground: #69707C; /* Cool slate */
+  --accent: #C99C48; /* Visto Gold accent */
+  --accent-foreground: #FFFFFF;
+  --destructive: #DC2626; /* Keep red for errors */
+  --border: #E5E7EB; /* Light border */
+  --input: #FFFFFF; /* White inputs */
+  --ring: #C99C48; /* Gold focus ring */
+  
+  /* Chart colors using Visto palette */
+  --chart-1: #C99C48; /* Gold */
+  --chart-2: #946832; /* Dark Gold */
+  --chart-3: #19232D; /* Dark Blue */
+  --chart-4: #69707C; /* Cool Slate */
+  --chart-5: #F3F4F6; /* Light Gray */
+  
+  /* Sidebar using dark blue theme */
+  --sidebar: #19232D; /* Dark blue background */
+  --sidebar-foreground: #F9FAFB; /* Light text */
+  --sidebar-primary: #C99C48; /* Gold accent */
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #946832; /* Dark gold hover */
+  --sidebar-accent-foreground: #F9FAFB;
+  --sidebar-border: rgba(201, 156, 72, 0.1); /* Subtle gold border */
+  --sidebar-ring: #C99C48;
+}
+
+.dark {
+  /* Visto Capital Dark Theme - Premium black card energy */
+  --background: #0F1419; /* Deeper dark */
+  --foreground: #F9FAFB;
+  --card: #19232D; /* Dark blue cards */
+  --card-foreground: #F9FAFB;
+  --popover: #19232D;
+  --popover-foreground: #F9FAFB;
+  --primary: #C99C48; /* Keep gold primary */
+  --primary-foreground: #19232D;
+  --secondary: #2D3748; /* Dark gray */
+  --secondary-foreground: #F9FAFB;
+  --muted: #2D3748;
+  --muted-foreground: #69707C;
+  --accent: #946832; /* Dark gold accent */
+  --accent-foreground: #F9FAFB;
+  --destructive: #EF4444;
+  --border: rgba(105, 112, 124, 0.2); /* Subtle slate border */
+  --input: #19232D; /* Dark blue inputs */
+  --ring: #C99C48;
+  
+  /* Dark chart colors */
+  --chart-1: #C99C48;
+  --chart-2: #946832;
+  --chart-3: #69707C;
+  --chart-4: #4A5568;
+  --chart-5: #2D3748;
+  
+  /* Sidebar in dark mode */
+  --sidebar: #0F1419; /* Deeper black */
+  --sidebar-foreground: #F9FAFB;
+  --sidebar-primary: #C99C48;
+  --sidebar-primary-foreground: #19232D;
+  --sidebar-accent: #946832;
+  --sidebar-accent-foreground: #F9FAFB;
+  --sidebar-border: rgba(201, 156, 72, 0.15);
+  --sidebar-ring: #C99C48;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "cv11", "cv02", "cv03", "cv04"; /* Inter font features */
+  }
+  
+  /* Premium typography scale */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+  
+  /* Apple-style focus states */
+  input:focus, textarea:focus, select:focus {
+    @apply ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+}
+
+/* Visto Capital utility classes */
+@layer utilities {
+  .visto-gold {
+    color: #C99C48;
+  }
+  
+  .visto-dark-gold {
+    color: #946832;
+  }
+  
+  .visto-dark-blue {
+    color: #19232D;
+  }
+  
+  .visto-slate {
+    color: #69707C;
+  }
+  
+  .bg-visto-gold {
+    background-color: #C99C48;
+  }
+  
+  .bg-visto-dark-gold {
+    background-color: #946832;
+  }
+  
+  .bg-visto-dark-blue {
+    background-color: #19232D;
+  }
+  
+  .bg-visto-light {
+    background-color: #F9FAFB;
+  }
+  
+  /* Premium gradients */
+  .gradient-visto {
+    background: linear-gradient(135deg, #C99C48 0%, #946832 100%);
+  }
+  
+  .gradient-visto-subtle {
+    background: linear-gradient(135deg, rgba(201, 156, 72, 0.1) 0%, rgba(148, 104, 50, 0.05) 100%);
+  }
+}

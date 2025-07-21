@@ -1,0 +1,106 @@
+{
+  "deno.enablePaths": [
+    "partner-onboarding-portal/supabase/functions"
+  ],
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.preferences.importModuleSpecifier": "relative",
+  
+  // Debugging Settings
+  "debug.allowBreakpointsEverywhere": true,
+  "debug.inlineValues": "auto",
+  "debug.showBreakpointsInOverviewRuler": true,
+  "debug.focusWindowOnBreak": true,
+  "debug.openDebug": "openOnDebugBreak",
+  
+  // Editor Settings
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  
+  // Emmet
+  "emmet.includeLanguages": {
+    "typescript": "typescriptreact",
+    "javascript": "javascriptreact"
+  },
+  
+  // File Associations
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  
+  // Auto Save
+  "files.autoSave": "onWindowChange",
+  "files.autoSaveDelay": 1000,
+  
+  // Terminal
+  "terminal.integrated.env.osx": {
+    "NODE_ENV": "development"
+  },
+  "terminal.integrated.env.linux": {
+    "NODE_ENV": "development"
+  },
+  "terminal.integrated.env.windows": {
+    "NODE_ENV": "development"
+  },
+  
+  // Search Settings
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/.vscode/chrome-debug-profile": true,
+    "**/.vscode/chrome-debug-profile-mobile": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/.env*": false
+  },
+  
+  // File Explorer
+  "files.exclude": {
+    "**/.next": true,
+    "**/node_modules": false,
+    "**/.vscode/chrome-debug-profile": true,
+    "**/.vscode/chrome-debug-profile-mobile": true
+  },
+  
+  // Tailwind CSS
+  "tailwindCSS.includeLanguages": {
+    "typescript": "typescript",
+    "typescriptreact": "typescriptreact"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ],
+  
+  // Next.js specific
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "javascript.preferences.includePackageJsonAutoImports": "auto",
+  
+  // Git
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  
+  // Extensions
+  "eslint.workingDirectories": ["partner-onboarding-portal"],
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  
+  // React/JSX
+  "javascript.suggest.autoImports": true,
+  "typescript.suggest.autoImports": true,
+  
+  // Supabase
+  "files.associations": {
+    "*.sql": "sql"
+  }
+} 
