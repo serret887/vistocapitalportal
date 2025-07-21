@@ -6,18 +6,53 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
+// Phone number formatting utility
+const formatPhoneNumber = (value: string): string => {
+  // Remove all non-numeric characters
+  const numbers = value.replace(/\D/g, '')
+  
+  // Limit to 10 digits
+  const limited = numbers.substring(0, 10)
+  
+  // Format as (XXX) XXX-XXXX
+  if (limited.length >= 6) {
+    return `(${limited.slice(0, 3)}) ${limited.slice(3, 6)}-${limited.slice(6)}`
+  } else if (limited.length >= 3) {
+    return `(${limited.slice(0, 3)}) ${limited.slice(3)}`
+  } else if (limited.length > 0) {
+    return `(${limited}`
+  }
+  
+  return limited
+}
+
+// Extract just numbers from formatted phone
+const getPhoneNumbers = (formatted: string): string => {
+  return formatted.replace(/\D/g, '')
+}
+
+// Validate phone number (must be 10 digits)
+const isValidPhoneNumber = (phone: string): boolean => {
+  const numbers = getPhoneNumbers(phone)
+  return numbers.length === 10
+}
+
 export function Step2PhoneNumber() {
   const { formData, updateFormData, nextStep, prevStep } = useOnboarding()
 
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateFormData({ phone_number: e.target.value })
+    const input = e.target.value
+    const formatted = formatPhoneNumber(input)
+    updateFormData({ phone_number: formatted })
   }
 
   const handleContinue = () => {
-    if (formData.phone_number) {
+    if (isValidPhoneNumber(formData.phone_number)) {
       nextStep()
     }
   }
+
+  const isPhoneValid = isValidPhoneNumber(formData.phone_number)
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -48,8 +83,26 @@ export function Step2PhoneNumber() {
               placeholder="(555) 123-4567"
               value={formData.phone_number}
               onChange={handlePhoneNumberChange}
-              className="text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
+              className={`text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 ${
+                formData.phone_number && !isPhoneValid 
+                  ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                  : ''
+              }`}
+              maxLength={14} // (XXX) XXX-XXXX = 14 characters
             />
+            {formData.phone_number && !isPhoneValid && (
+              <p className="text-sm text-red-600 mt-2">
+                Please enter a valid 10-digit phone number
+              </p>
+            )}
+            {isPhoneValid && (
+              <p className="text-sm text-green-600 mt-2 flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Valid phone number
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -64,7 +117,7 @@ export function Step2PhoneNumber() {
         </Button>
         <Button
           onClick={handleContinue}
-          disabled={!formData.phone_number}
+          disabled={!isPhoneValid}
           className="px-12 py-4 text-lg bg-primary hover:bg-primary/90 disabled:bg-muted-foreground/20 disabled:text-muted-foreground text-primary-foreground font-semibold tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
         >
           Continue
