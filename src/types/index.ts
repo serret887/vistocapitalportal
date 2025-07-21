@@ -112,15 +112,16 @@ export const PURCHASE_LOAN_TYPES = [
 ]
 
 // Income Types for Home Owner Loans
-export type IncomeSourceType = 'w2' | 'self_employed' | 'alimony' | 'ssn' | 'company'
-export type IncomeDocumentType = 'w2' | 'self_employed' | 'alimony' | 'ssn' | 'company' | '1040_tax_return'
+export type IncomeSourceType = 'w2' | 'self_employed' | 'alimony' | 'ssn' | 'company' | 'other'
+export type IncomeDocumentType = 'w2' | 'self_employed' | 'alimony' | 'ssn' | 'company' | 'other' | '1040_tax_return'
 
 export const INCOME_SOURCE_TYPES: { value: IncomeSourceType; label: string }[] = [
   { value: 'w2', label: 'W-2 (Employment Income)' },
   { value: 'self_employed', label: '1099 (Contract/Freelance Income)' },
   { value: 'alimony', label: 'Alimony/Child Support' },
   { value: 'ssn', label: 'Social Security/Disability' },
-  { value: 'company', label: 'Business/Company Income' }
+  { value: 'company', label: 'Business/Company Income' },
+  { value: 'other', label: 'Other Income' }
 ]
 
 export interface IncomeSource {
@@ -128,6 +129,7 @@ export interface IncomeSource {
   type: IncomeSourceType
   amount: number
   description: string
+  documents: File[] // Documents specific to this income source
 }
 
 export interface IncomeDocument {
@@ -221,7 +223,6 @@ export interface LoanApplicationFormData {
   // Income Information (for homeowner loans)
   total_income: number
   income_sources: IncomeSource[]
-  income_documents: File[]
   
   // Assets
   total_assets: number

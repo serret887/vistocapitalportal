@@ -52,7 +52,6 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
     // Income Information (for homeowner loans)
     total_income: 0,
     income_sources: [],
-    income_documents: [],
     
     // Assets
     total_assets: 0,
@@ -202,9 +201,12 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
               newErrors[`income_amount_${index}`] = 'Please enter a valid income amount'
             }
           })
-          if (formData.income_documents.length === 0) {
-            newErrors.income_documents = 'Please upload at least one income document'
-          }
+          // Check if each income source has at least one document
+          formData.income_sources.forEach((source, index) => {
+            if (source.documents.length === 0) {
+              newErrors[`income_docs_${index}`] = 'Please upload at least one supporting document for this income source'
+            }
+          })
         }
         break
 
@@ -289,7 +291,8 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
       id: uuidv4(),
       type: 'w2',
       amount: 0,
-      description: ''
+      description: '',
+      documents: []
     }
     setFormData(prev => ({
       ...prev,
@@ -341,7 +344,10 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
     setFormData(prev => ({ ...prev, total_income: totalIncome }))
   }
 
-  const handleIncomeFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+
+  // Handle document upload for specific income source
+  const handleIncomeSourceFileUpload = (incomeSourceId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files)
       
@@ -360,20 +366,24 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
 
       setFormData(prev => ({
         ...prev,
-        income_documents: [...prev.income_documents, ...validFiles]
+        income_sources: prev.income_sources.map(source =>
+          source.id === incomeSourceId 
+            ? { ...source, documents: [...source.documents, ...validFiles] }
+            : source
+        )
       }))
-
-      // Clear income documents error
-      if (errors.income_documents) {
-        setErrors(prev => ({ ...prev, income_documents: '' }))
-      }
     }
   }
 
-  const removeIncomeFile = (index: number) => {
+  // Remove document from specific income source
+  const removeIncomeSourceFile = (incomeSourceId: string, fileIndex: number) => {
     setFormData(prev => ({
       ...prev,
-      income_documents: prev.income_documents.filter((_, i) => i !== index)
+      income_sources: prev.income_sources.map(source =>
+        source.id === incomeSourceId 
+          ? { ...source, documents: source.documents.filter((_, i) => i !== fileIndex) }
+          : source
+      )
     }))
   }
 
@@ -842,7 +852,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
 
         {formData.income_sources.map((source, index) => (
           <Card key={source.id} className="border-2 border-border p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <div className="space-y-2">
                 <Label className="text-base font-medium visto-dark-blue">Income Type *</Label>
                 <Select
@@ -912,6 +922,69 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
                 </Button>
               </div>
             </div>
+
+            {/* Document Upload Section for this Income Source */}
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-base font-medium visto-dark-blue">Supporting Documents</Label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf"
+                    onChange={(e) => handleIncomeSourceFileUpload(source.id, e)}
+                    className="hidden"
+                    id={`income-docs-${source.id}`}
+                  />
+                  <label
+                    htmlFor={`income-docs-${source.id}`}
+                    className="cursor-pointer"
+                  >
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-primary text-primary hover:bg-primary/10"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Documents
+                    </Button>
+                  </label>
+                </div>
+              </div>
+
+              {/* Display uploaded documents */}
+              {source.documents.length > 0 && (
+                <div className="space-y-2">
+                  {source.documents.map((file, fileIndex) => (
+                    <div key={fileIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-gray-600" />
+                        <span className="text-sm text-gray-700">{file.name}</span>
+                        <span className="text-xs text-gray-500">
+                          ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeIncomeSourceFile(source.id, fileIndex)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {source.documents.length === 0 && (
+                <p className="text-sm text-gray-500 italic">
+                  No documents uploaded yet. Upload supporting documents for this income source.
+                </p>
+              )}
+            </div>
           </Card>
         ))}
       </div>
@@ -928,64 +1001,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
         </Card>
       )}
 
-      {/* Income Documents Upload */}
-      <div className="space-y-4">
-        <div>
-          <h4 className="text-lg font-semibold visto-dark-blue">Income Documents</h4>
-          <p className="text-base visto-slate">Upload supporting documents: W-2s, 1099s, alimony records, SSN statements, and 1040 tax returns</p>
-        </div>
 
-        {errors.income_documents && (
-          <p className="text-sm text-red-600">{errors.income_documents}</p>
-        )}
-        
-        <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 text-center">
-          <Upload className="w-12 h-12 visto-gold mx-auto mb-4" />
-          <div className="space-y-2">
-            <p className="text-lg font-medium visto-dark-blue">Upload Income Documents</p>
-            <p className="text-base visto-slate">PDF files only, max 10MB each</p>
-            <input
-              type="file"
-              multiple
-              accept=".pdf"
-              onChange={handleIncomeFileUpload}
-              className="hidden"
-              id="income-documents"
-            />
-            <label
-              htmlFor="income-documents"
-              className="inline-block px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg cursor-pointer transition-all duration-200"
-            >
-              Choose Files
-            </label>
-          </div>
-        </div>
-
-        {formData.income_documents.length > 0 && (
-          <div className="space-y-2">
-            <h5 className="font-medium visto-dark-blue">Uploaded Files:</h5>
-            {formData.income_documents.map((file, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <span className="text-sm visto-slate">{file.name}</span>
-                  <span className="text-xs text-gray-400 ml-2">
-                    ({(file.size / 1024 / 1024).toFixed(1)} MB)
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeIncomeFile(index)}
-                  className="border-red-300 text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 
