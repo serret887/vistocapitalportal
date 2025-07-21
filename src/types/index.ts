@@ -12,6 +12,9 @@ export const PARTNER_TYPES: PartnerType[] = [
 export interface PartnerProfile {
   id: string
   user_id: string
+  first_name: string
+  last_name: string
+  email: string
   partner_type: string
   phone_number?: string
   monthly_deal_volume?: number

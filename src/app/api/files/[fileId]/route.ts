@@ -78,11 +78,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Delete file from storage
-    const { error: storageError } = await supabase.storage
-      .from('loan-documents')
+      const { error: storageError } = await supabase.storage
+        .from('loan-documents')
       .remove([fileToDelete.path])
 
-    if (storageError) {
+      if (storageError) {
       console.error('Error deleting file from storage:', storageError)
       return NextResponse.json(
         { error: 'Failed to delete file from storage' },

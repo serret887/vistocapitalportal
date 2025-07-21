@@ -25,7 +25,18 @@ async function handleApiResponse<T>(response: Response): Promise<{ data?: T; err
     const result = await response.json()
     
     if (!response.ok) {
-      return { error: result.error || `HTTP ${response.status}` }
+      // Better error handling for different status codes
+      if (response.status === 401) {
+        return { error: 'Authentication required. Please log in.' }
+      } else if (response.status === 404) {
+        return { error: 'Resource not found' }
+      } else if (response.status === 403) {
+        return { error: 'Access denied' }
+      } else if (response.status >= 500) {
+        return { error: 'Server error. Please try again later.' }
+      } else {
+        return { error: result.error || `HTTP ${response.status}: ${result.message || 'Unknown error'}` }
+      }
     }
 
     return { data: result }

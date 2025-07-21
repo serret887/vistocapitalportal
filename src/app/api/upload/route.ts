@@ -6,7 +6,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = [
   'application/pdf',
   'image/jpeg',
-  'image/jpg',
+  'image/jpg', 
   'image/png',
   'image/webp'
 ]
@@ -116,10 +116,10 @@ export async function POST(request: NextRequest) {
     if (applicationId) {
       // Get current application
       const { data: application, error: appError } = await supabase
-        .from('loan_applications')
+          .from('loan_applications')
         .select('income_documents, bank_statements')
-        .eq('id', applicationId)
-        .eq('partner_id', partnerProfile.id)
+          .eq('id', applicationId)
+          .eq('partner_id', partnerProfile.id)
         .single()
 
       if (appError) {
@@ -138,13 +138,13 @@ export async function POST(request: NextRequest) {
         updateData.bank_statements = [...(application.bank_statements || []), fileRecord]
       }
 
-      const { error: updateError } = await supabase
-        .from('loan_applications')
+        const { error: updateError } = await supabase
+          .from('loan_applications')
         .update(updateData)
-        .eq('id', applicationId)
-        .eq('partner_id', partnerProfile.id)
+          .eq('id', applicationId)
+          .eq('partner_id', partnerProfile.id)
 
-      if (updateError) {
+        if (updateError) {
         console.error('Error updating application documents:', updateError)
         return NextResponse.json(
           { error: 'Failed to update application documents' },

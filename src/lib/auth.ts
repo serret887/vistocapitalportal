@@ -24,6 +24,9 @@ export interface User {
 export interface PartnerProfile {
   id: string
   user_id: string
+  first_name: string
+  last_name: string
+  email: string
   partner_type: string | null
   phone_number: string | null
   monthly_deal_volume: number | null
@@ -70,21 +73,21 @@ export async function getCurrentUserFromRequest(request: NextRequest) {
       return { user: null, error: error || new Error('Invalid token') }
     }
 
-    // Get user profile data
+    // Get partner profile data (now includes user info)
     const { data: profile, error: profileError } = await serverSupabase
-      .from('user_profiles')
+      .from('partner_profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profileError) {
-      console.error('Error fetching user profile:', profileError)
+      console.error('Error fetching partner profile:', profileError)
       return { user: null, error: profileError }
     }
 
     const userData: User = {
       id: user.id,
-      email: user.email!,
+      email: profile.email,
       firstName: profile.first_name,
       lastName: profile.last_name,
     }
@@ -201,21 +204,21 @@ export async function getCurrentUser() {
       return { user: null, error: null }
     }
 
-    // Get user profile data
+    // Get partner profile data (now includes user info)
     const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
+      .from('partner_profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
 
     if (profileError) {
-      console.error('Error fetching user profile:', profileError)
+      console.error('Error fetching partner profile:', profileError)
       return { user: null, error: profileError }
     }
 
     const userData: User = {
       id: user.id,
-      email: user.email!,
+      email: profile.email,
       firstName: profile.first_name,
       lastName: profile.last_name,
     }

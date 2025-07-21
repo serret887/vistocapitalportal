@@ -42,9 +42,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (error) {
       if (error.code === 'PGRST116') {
-        return NextResponse.json(
-          { error: 'Application not found' },
-          { status: 404 }
+      return NextResponse.json(
+        { error: 'Application not found' },
+        { status: 404 }
         )
       }
       console.error('Error fetching application:', error)

@@ -38,7 +38,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Validate status
     const validStatuses: LoanApplicationStatus[] = [
       'in_review',
-      'approved',
+      'approved', 
       'ineligible',
       'denied',
       'closed',

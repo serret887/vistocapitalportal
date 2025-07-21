@@ -29,14 +29,22 @@ export default function DashboardPage() {
       ])
       
       if (statsResult.error) {
-        toast.error('Failed to load dashboard stats')
+        if (statsResult.error.includes('Authentication required')) {
+          toast.error('Please log in to access the dashboard')
+        } else {
+          toast.error(`Failed to load dashboard stats: ${statsResult.error}`)
+        }
         console.error('Dashboard stats error:', statsResult.error)
       } else {
         setStats(statsResult.stats)
       }
 
       if (applicationsResult.error) {
-        toast.error('Failed to load applications')
+        if (applicationsResult.error.includes('Authentication required')) {
+          toast.error('Please log in to access applications')
+        } else {
+          toast.error(`Failed to load applications: ${applicationsResult.error}`)
+        }
         console.error('Applications error:', applicationsResult.error)
       } else {
         setApplications(applicationsResult.applications || [])
