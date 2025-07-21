@@ -5,6 +5,7 @@
 ### **Database Field Updates**
 
 **Partner Profiles Table:**
+
 - ❌ ~~`deals_per_month`~~ → ✅ **`monthly_deal_volume`** (integer)
 - ❌ ~~`monthly_volume`~~ → ✅ **`transaction_volume`** (numeric)
 - ❌ ~~`onboarding_completed`~~ → ✅ **`onboarded`** (boolean)
@@ -12,11 +13,12 @@
 ### **Partner Type Constraints**
 
 Added proper enum validation:
+
 ```sql
 partner_type text check (partner_type in (
-  'wholesaler', 
-  'investor', 
-  'real_estate_agent', 
+  'wholesaler',
+  'investor',
+  'real_estate_agent',
   'marketing_partner'
 ))
 ```
@@ -30,6 +32,7 @@ partner_type text check (partner_type in (
 ## 📁 **Supabase Folder Organization**
 
 ### **Structure Created:**
+
 ```
 📂 supabase/
 ├── 📄 config.toml - Local development configuration
@@ -40,12 +43,14 @@ partner_type text check (partner_type in (
 ### **Configuration Files:**
 
 **`supabase/config.toml`:**
+
 - ✅ **Project ID**: `partner-onboarding-portal`
 - ✅ **Ports**: API (54321), DB (54322), Studio (54323)
 - ✅ **Auth Settings**: Email signup enabled, confirmations disabled
 - ✅ **Local URLs**: Properly configured for development
 
 **Migration File:**
+
 - ✅ **Complete schema**: Users + Partner profiles + RLS
 - ✅ **Triggers**: Auto user profile creation
 - ✅ **Constraints**: Partner type validation
@@ -56,45 +61,55 @@ partner_type text check (partner_type in (
 ### **TypeScript Types Updated:**
 
 **`src/types/index.ts`:**
+
 ```typescript
 // Enhanced partner type validation
-export type PartnerTypeValue = 'wholesaler' | 'investor' | 'real_estate_agent' | 'marketing_partner'
+export type PartnerTypeValue =
+  | "wholesaler"
+  | "investor"
+  | "real_estate_agent"
+  | "marketing_partner";
 
 // Updated interface fields
 export interface OnboardingFormData {
-  partner_type: string
-  phone_number: string
-  monthly_deal_volume: number      // ← Updated
-  transaction_volume: number       // ← Updated
-  transaction_types: string[]
-  license_number?: string
-  license_state?: string
+  partner_type: string;
+  phone_number: string;
+  monthly_deal_volume: number; // ← Updated
+  transaction_volume: number; // ← Updated
+  transaction_types: string[];
+  license_number?: string;
+  license_state?: string;
 }
 ```
 
 ### **Components Updated:**
 
 **1. `OnboardingContext.tsx`:**
+
 - ✅ Form data structure updated
 - ✅ Submission logic updated
 - ✅ Partner type normalization (spaces to underscores)
 - ✅ `onboarded` field usage
 
 **2. `Step3BusinessInfo.tsx`:**
+
 - ✅ Field names updated
 - ✅ Event handlers renamed
 - ✅ Validation logic updated
 - ✅ UI labels updated
 
 **3. `Step4LicenseInfo.tsx`:**
+
 - ✅ Summary display updated
 - ✅ Field references corrected
 
 **4. `lib/auth.ts`:**
+
 - ✅ Interface definitions updated
 - ✅ Onboarding status check updated
 
 **5. `app/onboarding/page.tsx`:**
+
 - ✅ Database insert updated
 - ✅ Field mappings corrected
 
@@ -106,22 +121,19 @@ export interface OnboardingFormData {
 graph TD
     A[User Signs Up] --> B[auto.users table]
     B --> C[Trigger: handle_new_user]
-    C --> D[user_profiles created]
-    E[User Onboards] --> F[partner_profiles created]
+    C --> D[partner_profiles created with user info]
+    E[User Onboards] --> F[partner_profiles updated with business info]
     F --> G[onboarded = true]
     G --> H[Dashboard Access]
 ```
 
 ### **Row Level Security:**
 
-**User Profiles:**
+**Partner Profiles (Consolidated):**
+
 - ✅ Users see only their own profile
 - ✅ Users can insert/update own profile
 - ✅ Automatic profile creation on signup
-
-**Partner Profiles:**
-- ✅ Users see only their own partner data
-- ✅ Users can insert/update own partner data
 - ✅ Enforced via `auth.uid() = user_id`
 
 ### **Business Rules Enforced:**
@@ -134,6 +146,7 @@ graph TD
 ## 🔄 **Migration Applied**
 
 **Database Reset Successful:**
+
 ```bash
 ✅ Recreating database...
 ✅ Initialising schema...
@@ -142,19 +155,21 @@ graph TD
 ```
 
 **All Data Structures Ready:**
-- ✅ **user_profiles**: Basic user information
-- ✅ **partner_profiles**: Business onboarding data
+
+- ✅ **partner_profiles**: Consolidated user and partner information
 - ✅ **RLS Policies**: Security enforced
 - ✅ **Triggers**: Auto-profile creation
 
 ## 🚀 **Build & Validation**
 
 **TypeScript Compilation:**
+
 - ✅ **All type errors resolved**
 - ✅ **Field name consistency verified**
 - ✅ **Interface alignment confirmed**
 
 **Build Output:**
+
 ```bash
 ✅ Compiled successfully in 6.0s
 ✅ Linting and checking validity of types
@@ -165,6 +180,7 @@ graph TD
 ## 🎯 **Schema Compliance**
 
 **Matches User Requirements:**
+
 - ✅ **Partner type enum**: 4 specific values
 - ✅ **Volume fields**: Separate deal count & transaction volume
 - ✅ **License fields**: Optional, for real estate agents
@@ -174,10 +190,36 @@ graph TD
 ## 📋 **Authentication Flow Summary**
 
 1. **Signup**: User creates account via Supabase Auth
-2. **Profile Creation**: Automatic `user_profiles` entry
-3. **Onboarding Check**: `onboarded` status determines flow
-4. **Partner Profile**: Business data collection
-5. **Dashboard Access**: Only after `onboarded = true`
+2. **Profile Creation**: Automatic `partner_profiles` entry with user info
+3. **Onboarding**: Partner profile updated with business information
+4. **Dashboard Access**: Granted when `onboarded = true`
+
+## Database Schema Overview
+
+### Consolidated Table Structure
+
+**partner_profiles** (Consolidated user and partner information)
+
+- ✅ **User Info**: `first_name`, `last_name`, `email`
+- ✅ **Partner Info**: `partner_type`, `phone_number`, `monthly_deal_volume`, etc.
+- ✅ **Onboarding Status**: `onboarded` boolean flag
+- ✅ **Security**: RLS policies ensure data isolation
+
+### User Flow
+
+```
+A[User Signs Up] --> B[Auth User Created]
+B --> C[partner_profiles created automatically]
+C --> D[User Completes Onboarding]
+D --> E[partner_profiles updated with business info]
+E --> F[User Accesses Dashboard]
+```
+
+### Security Features
+
+- ✅ **RLS Policies**: Users can only access their own data
+- ✅ **Auto Profile Creation**: Partner profiles created on signup
+- ✅ **Unique Constraints**: One profile per user
 
 ## 🔑 **Key Improvements**
 
@@ -191,10 +233,11 @@ graph TD
 ## 🎉 **Ready for Production!**
 
 The database schema now perfectly matches your requirements:
+
 - ✅ **Proper partner type validation**
 - ✅ **Descriptive field names**
 - ✅ **Organized supabase folder structure**
 - ✅ **All components updated and type-safe**
 - ✅ **Build successful with optimized images**
 
-**Partner onboarding flow is production-ready!** 🚀 
+**Partner onboarding flow is production-ready!** 🚀

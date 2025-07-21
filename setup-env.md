@@ -22,16 +22,21 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 
 ## Database Setup
 
-The database is already configured and migrated! The following is set up:
+### Tables Created:
 
-- ✅ User profiles table
-- ✅ Partner profiles table  
-- ✅ Row Level Security policies
-- ✅ Automatic user profile creation trigger
+- ✅ Partner profiles table (consolidated with user info)
+- ✅ Loan applications table
+- ✅ Storage bucket for file uploads
+
+### Features:
+
+- ✅ Automatic partner profile creation trigger
+- ✅ Row Level Security (RLS) policies
+- ✅ File upload support
 
 ## Quick Start
 
 1. Ensure Supabase is running: `npx supabase start`
 2. Create `.env.local` with the local values above
 3. Start the app: `yarn dev`
-4. Visit `http://localhost:3000` to test! 
+4. Visit `http://localhost:3000` to test!

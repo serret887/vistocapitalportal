@@ -8,68 +8,58 @@ The Partner Portal now includes a complete authentication flow:
 2. **Sign In** → **Dashboard** (if onboarded) or **Onboarding** (if not)
 3. **Protected Routes** ensure users must be authenticated and onboarded
 
-## 🗄️ Database Setup
+## 🗄️ Database Schema
 
-### 1. Run the Database Schema
-
-Execute the SQL in `supabase-schema.sql` in your Supabase SQL editor:
+### partner_profiles Table
 
 ```sql
--- This creates:
--- 1. user_profiles table (basic user info)
--- 2. partner_profiles table (onboarding data)
--- 3. RLS policies for security
--- 4. Trigger to auto-create user profiles
+partner_profiles (
+  id uuid PRIMARY KEY,
+  user_id uuid UNIQUE REFERENCES auth.users(id),
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  email text NOT NULL,
+  partner_type text,
+  phone_number text,
+  monthly_deal_volume integer,
+  transaction_volume numeric,
+  transaction_types text[],
+  license_number text,
+  license_state text,
+  onboarded boolean DEFAULT false,
+  created_at timestamp DEFAULT now(),
+  updated_at timestamp DEFAULT now()
+)
 ```
 
-### 2. Configure Environment Variables
+### Key Features:
 
-Update your `.env.local` file:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+- **Consolidated Design**: User and partner info in one table
+- **Auto Creation**: Partner profile created on signup
+- **RLS Security**: Users can only access their own data
 
 ## 🔄 User Flow
 
-### New User Journey
-```
-1. Visit /signup
-2. Fill out: First Name, Last Name, Email, Password
-3. Account created → Redirect to /onboarding
-4. Complete 4-step onboarding process
-5. Submit → Redirect to /dashboard
-```
-
-### Returning User Journey
-```
-1. Visit /login
-2. Enter credentials
-3. If onboarded → /dashboard
-4. If not onboarded → /onboarding
-```
+1. **Signup** → Partner profile created automatically
+2. **Onboarding** → Partner profile updated with business info
+3. **Dashboard** → Access to loan applications and tools
 
 ## 🛡️ Security Features
 
-### Row Level Security (RLS)
-- Users can only access their own data
-- Automatic user profile creation on signup
-- Secure authentication with Supabase Auth
-
-### Protected Routes
-- `/dashboard` requires authentication + completed onboarding
-- `/onboarding` requires authentication
-- Automatic redirects if not authorized
+- **Row Level Security (RLS)**: Users can only access their own data
+- **Authentication Required**: All protected routes require login
+- **Onboarding Required**: Dashboard access requires completed onboarding
 
 ## 📱 Components
 
 ### Authentication Components
+
 - `SignupForm` - Functional signup with validation
 - `LoginForm` - Functional login with onboarding check
 - `ProtectedRoute` - Route wrapper for auth checks
 
 ### Context & State
+
 - `OnboardingContext` - Now works with authenticated users
 - Real-time auth state management
 - Automatic profile loading and saving
@@ -77,16 +67,19 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ## 🚀 Quick Start
 
 1. **Setup Supabase Database**:
+
    ```sql
    -- Copy and run supabase-schema.sql in Supabase SQL editor
    ```
 
 2. **Configure Environment**:
+
    ```bash
    # Update .env.local with your Supabase credentials
    ```
 
 3. **Start Development**:
+
    ```bash
    yarn dev
    ```
@@ -100,6 +93,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ## 🎯 Features
 
 ### ✅ Implemented
+
 - [x] User registration with basic info
 - [x] Automatic Supabase user creation
 - [x] Protected dashboard route
@@ -109,6 +103,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 - [x] Automatic redirection based on auth state
 
 ### 🔮 Future Enhancements
+
 - [ ] Email verification
 - [ ] Password reset functionality
 - [ ] Social authentication (Google, Microsoft)
@@ -118,6 +113,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ## 🛠️ Development Notes
 
 ### Database Tables
+
 ```sql
 user_profiles (
   id: uuid (auth.users.id)
@@ -143,6 +139,7 @@ partner_profiles (
 ```
 
 ### Authentication Flow
+
 1. User signs up → Supabase creates auth user
 2. Trigger creates user_profile automatically
 3. User completes onboarding → partner_profile created
@@ -163,4 +160,4 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
-The Visto Capital Partner Portal is now a complete authentication-enabled application! 🎉 
+The Visto Capital Partner Portal is now a complete authentication-enabled application! 🎉
