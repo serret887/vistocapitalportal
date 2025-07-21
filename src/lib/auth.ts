@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { createClient } from '@supabase/supabase-js'
+import { NextRequest } from 'next/server'
 
 export interface SignupData {
   email: string
@@ -32,6 +34,66 @@ export interface PartnerProfile {
   onboarded: boolean
   created_at: string
   updated_at: string
+}
+
+// Create a server-side Supabase client for API routes
+function createServerSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+  
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+}
+
+// Get user from request headers (for API routes)
+export async function getCurrentUserFromRequest(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { user: null, error: new Error('No authorization header') }
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    
+    // Create server-side client
+    const serverSupabase = createServerSupabaseClient()
+    
+    // Verify the token and get user
+    const { data: { user }, error } = await serverSupabase.auth.getUser(token)
+    
+    if (error || !user) {
+      return { user: null, error: error || new Error('Invalid token') }
+    }
+
+    // Get user profile data
+    const { data: profile, error: profileError } = await serverSupabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError) {
+      console.error('Error fetching user profile:', profileError)
+      return { user: null, error: profileError }
+    }
+
+    const userData: User = {
+      id: user.id,
+      email: user.email!,
+      firstName: profile.first_name,
+      lastName: profile.last_name,
+    }
+
+    return { user: userData, error: null }
+  } catch (error) {
+    console.error('Error getting current user from request:', error)
+    return { user: null, error: error as Error }
+  }
 }
 
 // Sign up a new user
@@ -102,12 +164,12 @@ export async function refreshSession() {
     }
     return { session, error: null }
   } catch (error) {
-    console.error('Unexpected error refreshing session:', error)
+    console.error('Error refreshing session:', error)
     return { session: null, error: error as Error }
   }
 }
 
-// Get the current user with session validation
+// Get the current user with session validation (client-side)
 export async function getCurrentUser() {
   try {
     // First try to get the current session

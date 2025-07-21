@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUserFromRequest } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import type { DashboardStats, LoanApplicationStatus } from '@/types'
 
 // GET /api/dashboard/stats - Get dashboard statistics
 export async function GET(request: NextRequest) {
   try {
-    const { user, error: userError } = await getCurrentUser()
+    const { user, error: userError } = await getCurrentUserFromRequest(request)
     
     if (userError || !user) {
       return NextResponse.json(

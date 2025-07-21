@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUserFromRequest } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import type { LoanApplicationStatus } from '@/types'
 
 interface RouteParams {
-  params: {
-    id: string
-  }
+  params: { id: string }
 }
 
 // PUT /api/applications/[id]/status - Update application status
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const { user, error: userError } = await getCurrentUser()
+    const { user, error: userError } = await getCurrentUserFromRequest(request)
     
     if (userError || !user) {
       return NextResponse.json(
@@ -35,13 +33,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Parse request body
     const { status } = await request.json()
 
     // Validate status
     const validStatuses: LoanApplicationStatus[] = [
       'in_review',
-      'approved', 
+      'approved',
       'ineligible',
       'denied',
       'closed',
@@ -49,64 +46,31 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       'pending_documents'
     ]
 
-    if (!status || !validStatuses.includes(status)) {
+    if (!validStatuses.includes(status)) {
       return NextResponse.json(
-        { error: 'Invalid status provided' },
-        { status: 400 }
-      )
-    }
-
-    // Validate the application exists and belongs to this partner
-    const { data: existingApplication, error: existingError } = await supabase
-      .from('loan_applications')
-      .select('id, status, first_name, last_name')
-      .eq('id', params.id)
-      .eq('partner_id', partnerProfile.id)
-      .single()
-
-    if (existingError || !existingApplication) {
-      return NextResponse.json(
-        { error: 'Application not found' },
-        { status: 404 }
-      )
-    }
-
-    // Check if status is actually changing
-    if (existingApplication.status === status) {
-      return NextResponse.json(
-        { error: 'Application already has this status' },
+        { error: 'Invalid status' },
         { status: 400 }
       )
     }
 
     // Update the application status
-    const { data: application, error: updateError } = await supabase
+    const { error } = await supabase
       .from('loan_applications')
-      .update({
-        status,
-        updated_at: new Date().toISOString()
-      })
+      .update({ status })
       .eq('id', params.id)
       .eq('partner_id', partnerProfile.id)
-      .select()
-      .single()
 
-    if (updateError) {
-      console.error('Error updating application status:', updateError)
+    if (error) {
+      console.error('Error updating application status:', error)
       return NextResponse.json(
         { error: 'Failed to update application status' },
         { status: 500 }
       )
     }
 
-    // Log the status change (optional - could be used for audit trail)
-    console.log(`Application ${params.id} status changed from ${existingApplication.status} to ${status} by partner ${partnerProfile.id}`)
-
     return NextResponse.json({
-      application,
       success: true,
-      message: `Application status updated to ${status}`,
-      previous_status: existingApplication.status
+      message: 'Application status updated successfully'
     })
 
   } catch (error) {

@@ -1,38 +1,18 @@
-'use client'
-
-import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { DashboardBreadcrumb } from "@/components/dashboard/dashboard-breadcrumb"
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const pathname = usePathname()
-  
-  // Determine the current page title based on the pathname
-  const getPageTitle = () => {
-    if (pathname === '/dashboard/mortgage-affordability') {
-      return 'Mortgage Affordability'
-    }
-    return 'My Clients'
-  }
-
   return (
     <ProtectedRoute requireOnboarding={true}>
       <SidebarProvider>
@@ -44,19 +24,7 @@ export default function DashboardLayout({
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">
-                    Dashboard
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{getPageTitle()}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+            <DashboardBreadcrumb />
           </header>
           {children}
         </SidebarInset>

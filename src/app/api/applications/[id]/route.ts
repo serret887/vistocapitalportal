@@ -1,18 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUserFromRequest } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
-import type { LoanApplicationStatus } from '@/types'
 
 interface RouteParams {
-  params: {
-    id: string
-  }
+  params: { id: string }
 }
 
 // GET /api/applications/[id] - Get a specific application
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { user, error: userError } = await getCurrentUser()
+    const { user, error: userError } = await getCurrentUserFromRequest(request)
     
     if (userError || !user) {
       return NextResponse.json(
@@ -36,17 +33,24 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get the specific application
-    const { data: application, error: applicationError } = await supabase
+    const { data: application, error } = await supabase
       .from('loan_applications')
       .select('*')
       .eq('id', params.id)
       .eq('partner_id', partnerProfile.id)
       .single()
 
-    if (applicationError || !application) {
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: 'Application not found' },
+          { status: 404 }
+        )
+      }
+      console.error('Error fetching application:', error)
       return NextResponse.json(
-        { error: 'Application not found' },
-        { status: 404 }
+        { error: 'Failed to fetch application' },
+        { status: 500 }
       )
     }
 
@@ -64,10 +68,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PUT /api/applications/[id] - Update an application
+// PUT /api/applications/[id] - Update a specific application
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const { user, error: userError } = await getCurrentUser()
+    const { user, error: userError } = await getCurrentUserFromRequest(request)
     
     if (userError || !user) {
       return NextResponse.json(
@@ -90,38 +94,19 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Parse request body
     const updateData = await request.json()
 
-    // Validate the application exists and belongs to this partner
-    const { data: existingApplication, error: existingError } = await supabase
-      .from('loan_applications')
-      .select('id')
-      .eq('id', params.id)
-      .eq('partner_id', partnerProfile.id)
-      .single()
-
-    if (existingError || !existingApplication) {
-      return NextResponse.json(
-        { error: 'Application not found' },
-        { status: 404 }
-      )
-    }
-
     // Update the application
-    const { data: application, error: updateError } = await supabase
+    const { data: application, error } = await supabase
       .from('loan_applications')
-      .update({
-        ...updateData,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', params.id)
       .eq('partner_id', partnerProfile.id)
       .select()
       .single()
 
-    if (updateError) {
-      console.error('Error updating application:', updateError)
+    if (error) {
+      console.error('Error updating application:', error)
       return NextResponse.json(
         { error: 'Failed to update application' },
         { status: 500 }
@@ -130,8 +115,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({
       application,
-      success: true,
-      message: 'Application updated successfully'
+      success: true
     })
 
   } catch (error) {
@@ -143,10 +127,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE /api/applications/[id] - Delete an application
+// DELETE /api/applications/[id] - Delete a specific application
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { user, error: userError } = await getCurrentUser()
+    const { user, error: userError } = await getCurrentUserFromRequest(request)
     
     if (userError || !user) {
       return NextResponse.json(
@@ -169,38 +153,22 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Validate the application exists and belongs to this partner
-    const { data: existingApplication, error: existingError } = await supabase
-      .from('loan_applications')
-      .select('id, income_documents, bank_statements')
-      .eq('id', params.id)
-      .eq('partner_id', partnerProfile.id)
-      .single()
-
-    if (existingError || !existingApplication) {
-      return NextResponse.json(
-        { error: 'Application not found' },
-        { status: 404 }
-      )
-    }
-
-    // TODO: Delete associated files from storage
-    // This would involve deleting files referenced in income_documents and bank_statements
-
     // Delete the application
-    const { error: deleteError } = await supabase
+    const { error } = await supabase
       .from('loan_applications')
       .delete()
       .eq('id', params.id)
       .eq('partner_id', partnerProfile.id)
 
-    if (deleteError) {
-      console.error('Error deleting application:', deleteError)
+    if (error) {
+      console.error('Error deleting application:', error)
       return NextResponse.json(
         { error: 'Failed to delete application' },
         { status: 500 }
       )
     }
+
+    // TODO: Also delete associated files from storage
 
     return NextResponse.json({
       success: true,
