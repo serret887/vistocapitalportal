@@ -1,6 +1,9 @@
+'use client'
+
 import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { usePathname } from "next/navigation"
 import { Home, Calculator, FileText, LogOut } from "lucide-react"
 
 import {
@@ -17,6 +20,9 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar"
 
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()
+
 // Partner Portal Navigation Data - Cleaned up to only include working links
 const data = {
   navMain: [
@@ -29,7 +35,7 @@ const data = {
           title: "My Clients",
           url: "/dashboard",
           icon: Home,
-          isActive: true,
+            isActive: pathname === "/dashboard",
         },
       ],
     },
@@ -42,7 +48,7 @@ const data = {
           title: "Mortgage Affordability",
           url: "/dashboard/mortgage-affordability",
           icon: Calculator,
-          isActive: false,
+            isActive: pathname === "/dashboard/mortgage-affordability",
         },
       ],
     },
@@ -55,17 +61,11 @@ const data = {
           title: "View Applications",
           url: "/dashboard",
           icon: FileText,
-          isActive: false,
+            isActive: pathname === "/dashboard",
         },
       ],
     },
   ],
-}
-
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const handleSignOut = async () => {
-    // Future: Implement sign out functionality
-    console.log('Sign out clicked')
   }
 
   return (
@@ -111,15 +111,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleSignOut} className="text-sidebar-foreground/70 hover:text-sidebar-foreground">
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </SidebarMenuButton>
+            <SignOutButton />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
       
       <SidebarRail />
     </Sidebar>
+  )
+}
+
+// Client component for sign out functionality
+function SignOutButton() {
+  const handleSignOut = async () => {
+    // Future: Implement sign out functionality
+    console.log('Sign out clicked')
+  }
+
+  return (
+    <SidebarMenuButton onClick={handleSignOut} className="text-sidebar-foreground/70 hover:text-sidebar-foreground">
+      <LogOut className="h-4 w-4" />
+      Sign Out
+    </SidebarMenuButton>
   )
 }

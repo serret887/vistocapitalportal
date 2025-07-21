@@ -1,3 +1,6 @@
+'use client'
+
+import { usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import {
@@ -20,6 +23,16 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
+  
+  // Determine the current page title based on the pathname
+  const getPageTitle = () => {
+    if (pathname === '/dashboard/mortgage-affordability') {
+      return 'Mortgage Affordability'
+    }
+    return 'My Clients'
+  }
+
   return (
     <ProtectedRoute requireOnboarding={true}>
       <SidebarProvider>
@@ -40,7 +53,7 @@ export default function DashboardLayout({
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>My Clients</BreadcrumbPage>
+                  <BreadcrumbPage>{getPageTitle()}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>

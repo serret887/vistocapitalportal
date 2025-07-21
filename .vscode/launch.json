@@ -1,10 +1,10 @@
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
+    "version": "0.2.0",
+    "configurations": [
+        {
       "name": "🚀 Debug Next.js",
       "type": "node",
-      "request": "launch",
+            "request": "launch",
       "program": "${workspaceFolder}/node_modules/.bin/next",
       "args": ["dev"],
       "console": "integratedTerminal",
@@ -24,12 +24,12 @@
     },
     {
       "name": "🧪 Debug Next.js (Production)",
-      "type": "node",
+            "type": "node",
       "request": "launch",
       "program": "${workspaceFolder}/node_modules/.bin/next",
       "args": ["start"],
       "console": "integratedTerminal",
-      "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}",
       "runtimeArgs": ["--inspect"],
       "env": {
         "NODE_ENV": "production"
@@ -49,6 +49,6 @@
         "<node_internals>/**",
         "**/node_modules/**"
       ]
-    }
-  ]
+        }
+    ]
 }
