@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createServerSupabaseClient } from '@/lib/auth';
 
 interface PricingRequest {
   loanProgram: string;
@@ -112,7 +106,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Visio pricing matrix
-    const { data: pricingData, error: pricingError } = await supabase
+    const serverSupabase = createServerSupabaseClient();
+    const { data: pricingData, error: pricingError } = await serverSupabase
       .from('pricing_matrices')
       .select('lender_id, matrix')
       .eq('lender_id', 'visio')
