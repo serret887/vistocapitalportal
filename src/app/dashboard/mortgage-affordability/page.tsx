@@ -10,10 +10,10 @@ import { Calculator, DollarSign, Home, TrendingUp } from 'lucide-react'
 export const dynamic = 'force-dynamic'
 
 export default function MortgageAffordabilityPage() {
-  const [income, setIncome] = useState('')
-  const [debts, setDebts] = useState('')
-  const [downPayment, setDownPayment] = useState('')
-  const [interestRate, setInterestRate] = useState('7.0')
+  const [income, setIncome] = useState(0)
+  const [debts, setDebts] = useState(0)
+  const [downPayment, setDownPayment] = useState(0)
+  const [interestRate, setInterestRate] = useState(7.0)
   const [results, setResults] = useState<{
     maxLoanAmount: number
     maxHomePrice: number
@@ -21,11 +21,35 @@ export default function MortgageAffordabilityPage() {
     debtToIncomeRatio: number
   } | null>(null)
 
+  // Utility function to handle number input formatting
+  const handleNumberInput = (value: string, setter: (value: number) => void) => {
+    // Remove all non-numeric characters except decimal point
+    const cleanValue = value.replace(/[^\d.]/g, '');
+    
+    // Remove leading zeros (but keep single zero)
+    const noLeadingZeros = cleanValue.replace(/^0+/, '') || '0';
+    
+    // Ensure only one decimal point
+    const parts = noLeadingZeros.split('.');
+    const formattedValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : noLeadingZeros;
+    
+    // Convert to number and update
+    const numValue = Number(formattedValue);
+    if (!isNaN(numValue)) {
+      setter(numValue);
+    }
+  };
+
+  // Utility function to format display value (remove trailing .0)
+  const formatDisplayValue = (value: number): string => {
+    return value === 0 ? '0' : value.toString().replace(/\.0$/, '');
+  };
+
   const calculateAffordability = () => {
-    const monthlyIncome = parseFloat(income) / 12
-    const monthlyDebts = parseFloat(debts)
-    const downPaymentAmount = parseFloat(downPayment)
-    const rate = parseFloat(interestRate) / 100 / 12
+    const monthlyIncome = income / 12
+    const monthlyDebts = debts
+    const downPaymentAmount = downPayment
+    const rate = interestRate / 100 / 12
     
     if (!monthlyIncome || monthlyIncome <= 0) return
 
@@ -63,10 +87,10 @@ export default function MortgageAffordabilityPage() {
   }
 
   const reset = () => {
-    setIncome('')
-    setDebts('')
-    setDownPayment('')
-    setInterestRate('7.0')
+    setIncome(0)
+    setDebts(0)
+    setDownPayment(0)
+    setInterestRate(7.0)
     setResults(null)
   }
 
@@ -106,9 +130,9 @@ export default function MortgageAffordabilityPage() {
               </Label>
               <Input
                 id="income"
-                type="number"
-                value={income}
-                onChange={(e) => setIncome(e.target.value)}
+                type="text"
+                value={formatDisplayValue(income)}
+                onChange={(e) => handleNumberInput(e.target.value, setIncome)}
                 placeholder="75000"
                 className="text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary"
               />
@@ -120,9 +144,9 @@ export default function MortgageAffordabilityPage() {
               </Label>
               <Input
                 id="debts"
-                type="number"
-                value={debts}
-                onChange={(e) => setDebts(e.target.value)}
+                type="text"
+                value={formatDisplayValue(debts)}
+                onChange={(e) => handleNumberInput(e.target.value, setDebts)}
                 placeholder="500"
                 className="text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary"
               />
@@ -137,9 +161,9 @@ export default function MortgageAffordabilityPage() {
               </Label>
               <Input
                 id="downPayment"
-                type="number"
-                value={downPayment}
-                onChange={(e) => setDownPayment(e.target.value)}
+                type="text"
+                value={formatDisplayValue(downPayment)}
+                onChange={(e) => handleNumberInput(e.target.value, setDownPayment)}
                 placeholder="20000"
                 className="text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary"
               />
@@ -151,10 +175,9 @@ export default function MortgageAffordabilityPage() {
               </Label>
               <Input
                 id="interestRate"
-                type="number"
-                step="0.1"
-                value={interestRate}
-                onChange={(e) => setInterestRate(e.target.value)}
+                type="text"
+                value={formatDisplayValue(interestRate)}
+                onChange={(e) => handleNumberInput(e.target.value, setInterestRate)}
                 className="text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary"
               />
             </div>

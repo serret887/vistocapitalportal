@@ -11,13 +11,35 @@ import { Checkbox } from '@/components/ui/checkbox'
 export function Step3BusinessInfo() {
   const { formData, updateFormData, nextStep, prevStep } = useOnboarding()
 
-  const handleMonthlyDealVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value) || 0
+  // Utility function to handle number input formatting
+  const handleNumberInput = (value: string, setter: (value: number) => void) => {
+    // Remove all non-numeric characters except decimal point
+    const cleanValue = value.replace(/[^\d.]/g, '');
+    
+    // Remove leading zeros (but keep single zero)
+    const noLeadingZeros = cleanValue.replace(/^0+/, '') || '0';
+    
+    // Ensure only one decimal point
+    const parts = noLeadingZeros.split('.');
+    const formattedValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : noLeadingZeros;
+    
+    // Convert to number and update
+    const numValue = Number(formattedValue);
+    if (!isNaN(numValue)) {
+      setter(numValue);
+    }
+  };
+
+  // Utility function to format display value (remove trailing .0)
+  const formatDisplayValue = (value: number): string => {
+    return value === 0 ? '0' : value.toString().replace(/\.0$/, '');
+  };
+
+  const handleMonthlyDealVolumeChange = (value: number) => {
     updateFormData({ monthly_deal_volume: value })
   }
 
-  const handleTransactionVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseFloat(e.target.value) || 0
+  const handleTransactionVolumeChange = (value: number) => {
     updateFormData({ transaction_volume: value })
   }
 
@@ -63,11 +85,11 @@ export function Step3BusinessInfo() {
                 <Label htmlFor="deals" className="text-lg font-medium visto-dark-blue">Number of deals</Label>
                 <Input
                   id="deals"
-                  type="number"
+                  type="text"
                   min="0"
                   placeholder="5"
-                  value={formData.monthly_deal_volume || ''}
-                  onChange={handleMonthlyDealVolumeChange}
+                  value={formatDisplayValue(formData.monthly_deal_volume || 0)}
+                  onChange={(e) => handleNumberInput(e.target.value, handleMonthlyDealVolumeChange)}
                   className="text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
                 />
               </div>
@@ -86,12 +108,12 @@ export function Step3BusinessInfo() {
                 <Label htmlFor="volume" className="text-lg font-medium visto-dark-blue">Monthly Average Volume ($)</Label>
                 <Input
                   id="volume"
-                  type="number"
+                  type="text"
                   min="0"
                   step="1000"
                   placeholder="250,000"
-                  value={formData.transaction_volume || ''}
-                  onChange={handleTransactionVolumeChange}
+                  value={formatDisplayValue(formData.transaction_volume || 0)}
+                  onChange={(e) => handleNumberInput(e.target.value, handleTransactionVolumeChange)}
                   className="text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
                 />
               </div>

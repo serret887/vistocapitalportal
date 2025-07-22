@@ -69,6 +69,8 @@ export async function getLoanPricing(request: LoanPricingRequest): Promise<LoanP
 
 // Helper function to convert calculator form data to API request
 export function convertFormDataToPricingRequest(formData: any): LoanPricingRequest {
+  console.log('Converting form data to pricing request:', formData);
+  
   // Parse FICO score range to get the minimum value
   const ficoRange = formData.ficoScore;
   let fico: number;
@@ -79,14 +81,16 @@ export function convertFormDataToPricingRequest(formData: any): LoanPricingReque
     const [min] = ficoRange.split('-').map(Number);
     fico = min;
   }
+  console.log(`FICO score parsed: ${ficoRange} -> ${fico}`);
 
   // Calculate LTV
   const ltv = formData.transactionType === "Purchase" 
     ? ((formData.loanAmount / formData.estimatedHomeValue) * 100)
     : ((formData.loanAmount / formData.estimatedHomeValue) * 100);
+  console.log(`LTV calculated: ${formData.loanAmount} / ${formData.estimatedHomeValue} * 100 = ${ltv}%`);
 
   // Convert transaction type to API format
-  const loanPurpose = formData.transactionType === "Purchase" ? "purchase" : 
+  const loanPurpose: 'purchase' | 'refinance' | 'cash_out' = formData.transactionType === "Purchase" ? "purchase" : 
                      formData.transactionType === "Refinance" ? "refinance" : "cash_out";
 
   // Convert property type to API format
@@ -94,7 +98,7 @@ export function convertFormDataToPricingRequest(formData: any): LoanPricingReque
                       formData.propertyType === "Multi Family" ? "2-4_units" :
                       formData.propertyType === "Condo" ? "condo" : "townhouse";
 
-  return {
+  const request = {
     loanProgram: 'DSCR',
     input: {
       fico,
@@ -111,6 +115,9 @@ export function convertFormDataToPricingRequest(formData: any): LoanPricingReque
       ysp: 1.0, // Default YSP
     }
   };
+  
+  console.log('Converted pricing request:', request);
+  return request;
 }
 
 // Generate loan options with different products (one per product type)
@@ -122,37 +129,45 @@ export async function generateLoanOptions(formData: any): Promise<LoanOption[]> 
       return [];
     }
 
-    // Calculate DSCR first
+    // Calculate DSCR using the correct formula for loan pricing
     const monthlyRentalIncome = formData.monthlyRentalIncome || 0;
     const annualPropertyInsurance = formData.annualPropertyInsurance || 0;
     const annualPropertyTaxes = formData.annualPropertyTaxes || 0;
     const monthlyHoaFee = formData.monthlyHoaFee || 0;
     
-    // Calculate NOI
-    const annualRentalIncome = monthlyRentalIncome * 12;
-    const annualExpenses = annualPropertyInsurance + annualPropertyTaxes + (monthlyHoaFee * 12);
-    const noi = annualRentalIncome - annualExpenses;
+    // Calculate monthly expenses
+    const monthlyInsurance = annualPropertyInsurance / 12;
+    const monthlyTaxes = annualPropertyTaxes / 12;
     
-    // Calculate monthly debt service (will be updated with actual rates)
+    // Calculate estimated monthly payment for DSCR calculation
     const estimatedRate = 7.0; // Default estimate
     const monthlyRate = estimatedRate / 100 / 12;
     const totalPayments = 30 * 12;
     const estimatedMonthlyPayment = (formData.loanAmount * monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / 
                                    (Math.pow(1 + monthlyRate, totalPayments) - 1);
-    const annualDebtService = estimatedMonthlyPayment * 12;
     
-    // Calculate DSCR
-    const dscr = noi / annualDebtService;
+    // Calculate DSCR using the correct formula
+    const monthlyTotalExpenses = monthlyTaxes + estimatedMonthlyPayment + monthlyInsurance + monthlyHoaFee;
+    const calculatedDscr = monthlyRentalIncome / monthlyTotalExpenses;
 
-    // Validate DSCR
-    if (isNaN(dscr) || dscr <= 0) {
-      console.error('Invalid DSCR calculated:', dscr);
-      return [];
-    }
+    console.log('DSCR calculation for loan pricing:', {
+      monthlyRentalIncome,
+      monthlyTaxes,
+      monthlyInsurance,
+      monthlyHoaFee,
+      estimatedMonthlyPayment,
+      monthlyTotalExpenses,
+      calculatedDscr
+    });
 
-    // Create base request
+    // Use calculated DSCR or fallback to minimum
+    const dscrForPricing = Math.max(calculatedDscr, 1.0); // Minimum 1.0 for loan pricing
+
+    console.log('Generating loan options with calculated DSCR:', dscrForPricing);
+
+    // Create base request with calculated DSCR
     const baseRequest = convertFormDataToPricingRequest(formData);
-    baseRequest.input.dscr = dscr;
+    baseRequest.input.dscr = dscrForPricing;
 
     // Generate request for all products at once (API will return one per product)
     const request = {
@@ -174,9 +189,11 @@ export async function generateLoanOptions(formData: any): Promise<LoanOption[]> 
         !isNaN(option.monthlyPayment)
       );
       
+      console.log('Valid loan options generated:', validOptions.length);
       return validOptions.sort((a, b) => a.finalRate - b.finalRate);
     }
 
+    console.log('No valid loan options returned from API');
     return [];
   } catch (error) {
     console.error('Error generating loan options:', error);

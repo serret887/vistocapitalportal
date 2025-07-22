@@ -94,10 +94,10 @@ export function PricingMatrix() {
   const [pricingData, setPricingData] = useState<PricingMatrixEntry[]>(samplePricingMatrix)
   const [filters, setFilters] = useState({
     propertyType: '',
-    minDSCR: '',
-    maxDSCR: '',
-    minLoanAmount: '',
-    maxLoanAmount: ''
+    minDSCR: 0,
+    maxDSCR: 0,
+    minLoanAmount: 0,
+    maxLoanAmount: 0
   })
 
   const propertyTypes = [
@@ -118,20 +118,41 @@ export function PricingMatrix() {
     return true
   })
 
-  const handleFilterChange = (field: string, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
+  // Utility function to handle number input formatting
+  const handleNumberInput = (value: string, setter: (value: number) => void) => {
+    // Remove all non-numeric characters except decimal point
+    const cleanValue = value.replace(/[^\d.]/g, '');
+    
+    // Remove leading zeros (but keep single zero)
+    const noLeadingZeros = cleanValue.replace(/^0+/, '') || '0';
+    
+    // Ensure only one decimal point
+    const parts = noLeadingZeros.split('.');
+    const formattedValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : noLeadingZeros;
+    
+    // Convert to number and update
+    const numValue = Number(formattedValue);
+    if (!isNaN(numValue)) {
+      setter(numValue);
+    }
+  };
+
+  // Utility function to format display value (remove trailing .0)
+  const formatDisplayValue = (value: number): string => {
+    return value === 0 ? '0' : value.toString().replace(/\.0$/, '');
+  };
+
+  const handleFilterChange = (key: string, value: string | number) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
 
   const clearFilters = () => {
     setFilters({
       propertyType: '',
-      minDSCR: '',
-      maxDSCR: '',
-      minLoanAmount: '',
-      maxLoanAmount: ''
+      minDSCR: 0,
+      maxDSCR: 0,
+      minLoanAmount: 0,
+      maxLoanAmount: 0
     })
   }
 
@@ -270,11 +291,11 @@ export function PricingMatrix() {
                   <Label htmlFor="minDSCR">Minimum DSCR</Label>
                   <Input
                     id="minDSCR"
-                    type="number"
-                    step="0.01"
-                    value={filters.minDSCR}
-                    onChange={(e) => handleFilterChange('minDSCR', e.target.value)}
-                    placeholder="1.05"
+                    type="text"
+                    value={formatDisplayValue(filters.minDSCR)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => handleFilterChange('minDSCR', value))}
+                    placeholder="1.0"
+                    className="h-8 text-xs"
                   />
                 </div>
 
@@ -282,11 +303,11 @@ export function PricingMatrix() {
                   <Label htmlFor="maxDSCR">Maximum DSCR</Label>
                   <Input
                     id="maxDSCR"
-                    type="number"
-                    step="0.01"
-                    value={filters.maxDSCR}
-                    onChange={(e) => handleFilterChange('maxDSCR', e.target.value)}
-                    placeholder="1.50"
+                    type="text"
+                    value={formatDisplayValue(filters.maxDSCR)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => handleFilterChange('maxDSCR', value))}
+                    placeholder="2.0"
+                    className="h-8 text-xs"
                   />
                 </div>
 
@@ -294,10 +315,11 @@ export function PricingMatrix() {
                   <Label htmlFor="minLoanAmount">Minimum Loan Amount</Label>
                   <Input
                     id="minLoanAmount"
-                    type="number"
-                    value={filters.minLoanAmount}
-                    onChange={(e) => handleFilterChange('minLoanAmount', e.target.value)}
+                    type="text"
+                    value={formatDisplayValue(filters.minLoanAmount)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => handleFilterChange('minLoanAmount', value))}
                     placeholder="100000"
+                    className="h-8 text-xs"
                   />
                 </div>
 
@@ -305,10 +327,11 @@ export function PricingMatrix() {
                   <Label htmlFor="maxLoanAmount">Maximum Loan Amount</Label>
                   <Input
                     id="maxLoanAmount"
-                    type="number"
-                    value={filters.maxLoanAmount}
-                    onChange={(e) => handleFilterChange('maxLoanAmount', e.target.value)}
-                    placeholder="5000000"
+                    type="text"
+                    value={formatDisplayValue(filters.maxLoanAmount)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => handleFilterChange('maxLoanAmount', value))}
+                    placeholder="1000000"
+                    className="h-8 text-xs"
                   />
                 </div>
               </div>

@@ -55,20 +55,44 @@ export default function DSCRCalculator() {
   const [selectedLoan, setSelectedLoan] = useState<LoanOption | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Utility function to handle number input formatting
+  const handleNumberInput = (value: string, setter: (value: number) => void) => {
+    // Remove all non-numeric characters except decimal point
+    const cleanValue = value.replace(/[^\d.]/g, '');
+    
+    // Remove leading zeros (but keep single zero)
+    const noLeadingZeros = cleanValue.replace(/^0+/, '') || '0';
+    
+    // Ensure only one decimal point
+    const parts = noLeadingZeros.split('.');
+    const formattedValue = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : noLeadingZeros;
+    
+    // Convert to number and update
+    const numValue = Number(formattedValue);
+    if (!isNaN(numValue)) {
+      setter(numValue);
+    }
+  };
+
+  // Utility function to format display value (remove trailing .0)
+  const formatDisplayValue = (value: number): string => {
+    return value === 0 ? '0' : value.toString().replace(/\.0$/, '');
+  };
+
   const handlePropertyValueChange = (value: number) => {
-    setFormData(prev => ({
-      ...prev,
-      estimatedHomeValue: value,
-      loanAmount: value * (1 - prev.downPayment / 100)
-    }));
+    setFormData({...formData, estimatedHomeValue: value});
+    if (formData.transactionType === "Purchase") {
+      const downPaymentAmount = (value * formData.downPayment) / 100;
+      const newLoanAmount = value - downPaymentAmount;
+      setFormData(prev => ({...prev, loanAmount: Math.round(newLoanAmount)}));
+    }
   };
 
   const handleDownPaymentChange = (value: number) => {
-    setFormData(prev => ({
-      ...prev,
-      downPayment: value,
-      loanAmount: prev.estimatedHomeValue * (1 - value / 100)
-    }));
+    setFormData({...formData, downPayment: value});
+    const downPaymentAmount = (formData.estimatedHomeValue * value) / 100;
+    const newLoanAmount = formData.estimatedHomeValue - downPaymentAmount;
+    setFormData(prev => ({...prev, loanAmount: Math.round(newLoanAmount)}));
   };
 
   const calculateDSCR = () => {
@@ -77,36 +101,80 @@ export default function DSCRCalculator() {
     const annualPropertyTaxes = formData.annualPropertyTaxes;
     const monthlyHoaFee = formData.monthlyHoaFee;
 
-    // Calculate NOI
-    const annualRentalIncome = monthlyRentalIncome * 12;
-    const annualExpenses = annualPropertyInsurance + annualPropertyTaxes + (monthlyHoaFee * 12);
-    const noi = annualRentalIncome - annualExpenses;
+    // Calculate monthly expenses
+    const monthlyInsurance = annualPropertyInsurance / 12;
+    const monthlyTaxes = annualPropertyTaxes / 12;
 
     // Calculate debt service based on selected loan or default rate
     let monthlyRate: number;
     let totalPayments: number;
+    let monthlyPayment: number;
+    let monthlyDebtService: number;
     
-    if (selectedLoan && selectedLoan.finalRate) {
-      monthlyRate = selectedLoan.finalRate / 100 / 12;
-      totalPayments = selectedLoan.termYears * 12;
+    if (selectedLoan && selectedLoan.finalRate && selectedLoan.monthlyPayment) {
+      // Use the selected loan's actual monthly payment
+      monthlyPayment = selectedLoan.monthlyPayment;
+      monthlyDebtService = monthlyPayment;
+      console.log('Using selected loan for DSCR calculation:', {
+        selectedLoan,
+        monthlyPayment,
+        monthlyDebtService
+      });
     } else {
       // Default calculation with estimated rate
       monthlyRate = 7.0 / 100 / 12;
       totalPayments = 30 * 12;
+      monthlyPayment = (formData.loanAmount * monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / 
+                      (Math.pow(1 + monthlyRate, totalPayments) - 1);
+      monthlyDebtService = monthlyPayment;
+      console.log('Using default rate for DSCR calculation:', {
+        defaultRate: 7.0,
+        monthlyPayment,
+        monthlyDebtService
+      });
     }
 
-    const monthlyPayment = (formData.loanAmount * monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / 
-                          (Math.pow(1 + monthlyRate, totalPayments) - 1);
-    const annualDebtService = monthlyPayment * 12;
-
-    // Calculate DSCR
-    const dscr = noi / annualDebtService;
+    // Calculate DSCR using the correct formula
+    const monthlyTotalExpenses = monthlyTaxes + monthlyDebtService + monthlyInsurance + monthlyHoaFee;
+    const dscr = monthlyRentalIncome / monthlyTotalExpenses;
 
     // Calculate other metrics
+    const annualRentalIncome = monthlyRentalIncome * 12;
+    const annualExpenses = annualPropertyInsurance + annualPropertyTaxes + (monthlyHoaFee * 12);
+    const noi = annualRentalIncome - annualExpenses;
     const capRate = (noi / formData.estimatedHomeValue) * 100;
-    const cashOnCashReturn = ((noi - annualDebtService) / (formData.loanAmount * 0.25)) * 100;
+    
+    // Calculate actual down payment amount
+    const actualDownPayment = formData.estimatedHomeValue - formData.loanAmount;
+    const annualDebtService = monthlyDebtService * 12;
+    const cashOnCashReturn = ((noi - annualDebtService) / actualDownPayment) * 100;
+    
     const breakEvenRatio = (annualDebtService + annualExpenses) / annualRentalIncome;
     const cashFlow = noi - annualDebtService;
+
+    // Debug logging
+    console.log('DSCR Calculation Debug:', {
+      monthlyRentalIncome,
+      monthlyTaxes,
+      monthlyInsurance,
+      monthlyHoaFee,
+      monthlyDebtService,
+      monthlyTotalExpenses,
+      dscr,
+      loanAmount: formData.loanAmount,
+      monthlyRate: selectedLoan ? selectedLoan.finalRate / 100 / 12 : 7.0 / 100 / 12,
+      totalPayments: selectedLoan ? selectedLoan.termYears * 12 : 30 * 12,
+      monthlyPayment,
+      annualRentalIncome,
+      annualExpenses,
+      noi,
+      capRate,
+      actualDownPayment,
+      cashOnCashReturn,
+      breakEvenRatio,
+      cashFlow,
+      selectedLoan: selectedLoan ? selectedLoan.product : 'None'
+    });
 
     setResults({
       noi,
@@ -122,12 +190,24 @@ export default function DSCRCalculator() {
   const handleCalculate = async () => {
     setIsLoading(true);
     try {
-      // Calculate initial DSCR
+      // Clear any previously selected loan
+      setSelectedLoan(null);
+      
+      // Calculate initial DSCR with default rate
       calculateDSCR();
       
       // Generate loan options
       const options = await generateLoanOptions(formData);
       setLoanOptions(options);
+      
+      console.log('Calculation completed:', {
+        loanOptionsCount: options.length,
+        options: options.map(opt => ({
+          product: opt.product,
+          finalRate: opt.finalRate,
+          monthlyPayment: opt.monthlyPayment
+        }))
+      });
     } catch (error) {
       console.error('Error calculating:', error);
     } finally {
@@ -139,8 +219,54 @@ export default function DSCRCalculator() {
     // Only select loans with valid data
     if (loan && loan.finalRate && loan.monthlyPayment) {
       setSelectedLoan(loan);
-      // Recalculate DSCR with the new loan terms
-      setTimeout(() => calculateDSCR(), 100);
+      
+      // Recalculate DSCR using the selected loan's actual monthly payment
+      const monthlyRentalIncome = formData.monthlyRentalIncome;
+      const annualPropertyInsurance = formData.annualPropertyInsurance;
+      const annualPropertyTaxes = formData.annualPropertyTaxes;
+      const monthlyHoaFee = formData.monthlyHoaFee;
+
+      // Calculate monthly expenses
+      const monthlyInsurance = annualPropertyInsurance / 12;
+      const monthlyTaxes = annualPropertyTaxes / 12;
+
+      // Use the selected loan's actual monthly payment
+      const monthlyDebtService = loan.monthlyPayment;
+
+      // Calculate DSCR using the correct formula
+      const monthlyTotalExpenses = monthlyTaxes + monthlyDebtService + monthlyInsurance + monthlyHoaFee;
+      const dscr = monthlyRentalIncome / monthlyTotalExpenses;
+
+      // Calculate other metrics
+      const annualRentalIncome = monthlyRentalIncome * 12;
+      const annualExpenses = annualPropertyInsurance + annualPropertyTaxes + (monthlyHoaFee * 12);
+      const noi = annualRentalIncome - annualExpenses;
+      const capRate = (noi / formData.estimatedHomeValue) * 100;
+      const actualDownPayment = formData.estimatedHomeValue - formData.loanAmount;
+      const cashOnCashReturn = ((noi - monthlyDebtService * 12) / actualDownPayment) * 100;
+      const breakEvenRatio = (monthlyDebtService * 12 + annualExpenses) / annualRentalIncome;
+      const cashFlow = noi - monthlyDebtService * 12;
+
+      console.log('DSCR Recalculation with selected loan:', {
+        selectedLoan: loan,
+        monthlyPayment: loan.monthlyPayment,
+        monthlyDebtService,
+        monthlyTaxes,
+        monthlyInsurance,
+        monthlyHoaFee,
+        monthlyTotalExpenses,
+        dscr
+      });
+
+      setResults({
+        noi,
+        debtService: monthlyDebtService * 12,
+        dscr,
+        capRate,
+        cashOnCashReturn,
+        breakEvenRatio,
+        cashFlow
+      });
     }
   };
 
@@ -280,9 +406,9 @@ export default function DSCRCalculator() {
                 <div>
                   <Label htmlFor="estimatedHomeValue" className="text-xs font-medium">Estimated Home Value</Label>
                   <Input
-                    type="number"
-                    value={formData.estimatedHomeValue}
-                    onChange={(e) => handlePropertyValueChange(Number(e.target.value))}
+                    type="text"
+                    value={formatDisplayValue(formData.estimatedHomeValue)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, estimatedHomeValue: value}))}
                     placeholder="200000"
                     className="h-8 text-xs"
                   />
@@ -291,9 +417,9 @@ export default function DSCRCalculator() {
                 <div>
                   <Label htmlFor="loanAmount" className="text-xs font-medium">Loan Amount</Label>
                   <Input
-                    type="number"
-                    value={formData.loanAmount}
-                    onChange={(e) => setFormData({...formData, loanAmount: Number(e.target.value)})}
+                    type="text"
+                    value={formatDisplayValue(formData.loanAmount)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, loanAmount: value}))}
                     placeholder={formData.transactionType === "Purchase" ? "160000" : "120000"}
                     className="h-8 text-xs"
                   />
@@ -304,9 +430,9 @@ export default function DSCRCalculator() {
                     <div>
                       <Label htmlFor="downPayment" className="text-xs font-medium">Down Payment (%)</Label>
                       <Input
-                        type="number"
-                        value={formData.downPayment}
-                        onChange={(e) => handleDownPaymentChange(Number(e.target.value))}
+                        type="text"
+                        value={formatDisplayValue(formData.downPayment)}
+                        onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, downPayment: value}))}
                         placeholder="20"
                         className="h-8 text-xs"
                       />
@@ -334,9 +460,9 @@ export default function DSCRCalculator() {
                     <div>
                       <Label htmlFor="remainingMortgage" className="text-xs font-medium">Remaining Mortgage</Label>
                       <Input
-                        type="number"
-                        value={formData.remainingMortgage}
-                        onChange={(e) => setFormData({...formData, remainingMortgage: Number(e.target.value)})}
+                        type="text"
+                        value={formatDisplayValue(formData.remainingMortgage)}
+                        onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, remainingMortgage: value}))}
                         placeholder="120000"
                         className="h-8 text-xs"
                       />
@@ -389,9 +515,9 @@ export default function DSCRCalculator() {
                 <div>
                   <Label htmlFor="brokerPoints" className="text-xs font-medium">Broker Points</Label>
                   <Input
-                    type="number"
-                    value={formData.brokerPoints}
-                    onChange={(e) => setFormData({...formData, brokerPoints: Number(e.target.value)})}
+                    type="text"
+                    value={formatDisplayValue(formData.brokerPoints)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, brokerPoints: value}))}
                     placeholder="1.0"
                     className="h-8 text-xs"
                   />
@@ -400,9 +526,9 @@ export default function DSCRCalculator() {
                 <div>
                   <Label htmlFor="brokerAdminFee" className="text-xs font-medium">Admin Fee</Label>
                   <Input
-                    type="number"
-                    value={formData.brokerAdminFee}
-                    onChange={(e) => setFormData({...formData, brokerAdminFee: Number(e.target.value)})}
+                    type="text"
+                    value={formatDisplayValue(formData.brokerAdminFee)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, brokerAdminFee: value}))}
                     placeholder="995"
                     className="h-8 text-xs"
                   />
@@ -424,9 +550,9 @@ export default function DSCRCalculator() {
                 <div>
                   <Label htmlFor="monthlyRentalIncome" className="text-xs font-medium">Monthly Rental Income</Label>
                   <Input
-                    type="number"
-                    value={formData.monthlyRentalIncome}
-                    onChange={(e) => setFormData({...formData, monthlyRentalIncome: Number(e.target.value)})}
+                    type="text"
+                    value={formatDisplayValue(formData.monthlyRentalIncome)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, monthlyRentalIncome: value}))}
                     placeholder="2500"
                     className="h-8 text-xs"
                   />
@@ -435,9 +561,9 @@ export default function DSCRCalculator() {
                 <div>
                   <Label htmlFor="annualPropertyInsurance" className="text-xs font-medium">Annual Property Insurance</Label>
                   <Input
-                    type="number"
-                    value={formData.annualPropertyInsurance}
-                    onChange={(e) => setFormData({...formData, annualPropertyInsurance: Number(e.target.value)})}
+                    type="text"
+                    value={formatDisplayValue(formData.annualPropertyInsurance)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, annualPropertyInsurance: value}))}
                     placeholder="1200"
                     className="h-8 text-xs"
                   />
@@ -446,9 +572,9 @@ export default function DSCRCalculator() {
                 <div>
                   <Label htmlFor="annualPropertyTaxes" className="text-xs font-medium">Annual Property Taxes</Label>
                   <Input
-                    type="number"
-                    value={formData.annualPropertyTaxes}
-                    onChange={(e) => setFormData({...formData, annualPropertyTaxes: Number(e.target.value)})}
+                    type="text"
+                    value={formatDisplayValue(formData.annualPropertyTaxes)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, annualPropertyTaxes: value}))}
                     placeholder="2400"
                     className="h-8 text-xs"
                   />
@@ -457,9 +583,9 @@ export default function DSCRCalculator() {
                 <div>
                   <Label htmlFor="monthlyHoaFee" className="text-xs font-medium">Monthly HOA Fee</Label>
                   <Input
-                    type="number"
-                    value={formData.monthlyHoaFee}
-                    onChange={(e) => setFormData({...formData, monthlyHoaFee: Number(e.target.value)})}
+                    type="text"
+                    value={formatDisplayValue(formData.monthlyHoaFee)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, monthlyHoaFee: value}))}
                     placeholder="0"
                     className="h-8 text-xs"
                   />

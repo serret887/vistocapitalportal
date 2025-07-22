@@ -984,7 +984,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
                 <p className="text-sm text-gray-500 italic">
                   No documents uploaded yet. Upload supporting documents for this income source.
                 </p>
-              )}
+        )}
       </div>
           </Card>
         ))}

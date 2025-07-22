@@ -102,6 +102,8 @@ export async function POST(request: NextRequest) {
     const body: PricingRequest = await request.json();
     const { loanProgram, input } = body;
 
+    console.log('Loan Pricing API Request:', { loanProgram, input });
+
     if (!loanProgram || !input) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
@@ -118,11 +120,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (pricingError || !pricingData) {
+      console.error('Pricing matrix error:', pricingError);
       return NextResponse.json(
         { success: false, error: 'Pricing matrix not found' },
         { status: 404 }
       );
     }
+
+    console.log('Pricing matrix found:', pricingData.lender_id);
 
     const matrix: VisioPricingMatrix = pricingData.matrix;
     
@@ -136,6 +141,8 @@ export async function POST(request: NextRequest) {
       product !== '2_4_Units'
     );
     
+    console.log('Available products:', products);
+    
     if (products.length === 0) {
       return NextResponse.json(
         { success: false, error: 'No valid products found in pricing matrix' },
@@ -146,9 +153,13 @@ export async function POST(request: NextRequest) {
     const results: PricingResult[] = [];
     
     for (const product of products) {
+      console.log(`Calculating pricing for product: ${product}`);
       const result = calculateVisioPricing(matrix, input, product, pricingData.lender_id);
       if (result) {
+        console.log(`Valid result for ${product}:`, result);
         results.push(result);
+      } else {
+        console.log(`No valid result for ${product}`);
       }
     }
 
@@ -162,6 +173,8 @@ export async function POST(request: NextRequest) {
 
     // Sort results by final rate (lowest first)
     results.sort((a, b) => a.finalRate - b.finalRate);
+
+    console.log(`Returning ${results.length} loan options`);
 
     return NextResponse.json({
       success: true,
@@ -179,6 +192,8 @@ export async function POST(request: NextRequest) {
 
 function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: string, lenderId: string): PricingResult | null {
   try {
+    console.log(`Calculating Visio pricing for product ${product} with input:`, input);
+    
     // Validate input parameters
     if (!input.fico || !input.ltv || !input.loanAmount || !input.dscr) {
       console.error('Missing required input parameters');
@@ -191,6 +206,7 @@ function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: 
       console.error(`No FICO tier found for score: ${input.fico}`);
       return null;
     }
+    console.log(`FICO tier found: ${ficoTier}`);
 
     // Find LTV range
     const ltvRange = findLTVRange(matrix.base_rates.tiers[ficoTier], input.ltv);
@@ -198,6 +214,7 @@ function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: 
       console.error(`No LTV range found for LTV: ${input.ltv}`);
       return null;
     }
+    console.log(`LTV range found: ${ltvRange}`);
 
     // Get base rate
     const baseRate = matrix.base_rates.tiers[ficoTier][ltvRange];
@@ -205,38 +222,48 @@ function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: 
       console.error(`Invalid base rate for FICO: ${ficoTier}, LTV: ${ltvRange}`);
       return null;
     }
+    console.log(`Base rate: ${baseRate}`);
     
     // Apply product adjustment
     const productAdjustment = matrix.rate_structure.products[product] || 0;
+    console.log(`Product adjustment for ${product}: ${productAdjustment}`);
     
     // Apply interest-only adjustment if applicable
     const interestOnlyAdjustment = input.interestOnly ? matrix.rate_structure.products['Interest_Only'] : 0;
+    console.log(`Interest-only adjustment: ${interestOnlyAdjustment}`);
     
     // Apply DSCR adjustments
     let dscrAdjustment = 0;
     if (input.dscr > 1.20) {
       dscrAdjustment = matrix.rate_structure.program_adjustments.dscr_adjustments.dscr_gt_1_20;
+      console.log(`DSCR > 1.20 adjustment: ${dscrAdjustment}`);
     } else if (input.dscr < 1.00 && input.ltv <= 65) {
       dscrAdjustment = matrix.rate_structure.program_adjustments.dscr_adjustments.dscr_lt_1_00_to_0_75_ltv_le_65;
+      console.log(`DSCR < 1.00 adjustment: ${dscrAdjustment}`);
     }
     
     // Apply program adjustments
     let programAdjustment = 0;
     if (input.loanPurpose === 'cash_out') {
       programAdjustment += matrix.rate_structure.program_adjustments.cash_out_refinance;
+      console.log(`Cash-out adjustment: ${matrix.rate_structure.program_adjustments.cash_out_refinance}`);
     }
     if (input.propertyType === 'condo') {
       programAdjustment += matrix.rate_structure.program_adjustments.condo;
+      console.log(`Condo adjustment: ${matrix.rate_structure.program_adjustments.condo}`);
     }
     if (input.propertyType === '2-4_units' || input.propertyType === '2_4_units') {
       programAdjustment += matrix.rate_structure.program_adjustments["2_4_units"];
+      console.log(`2-4 units adjustment: ${matrix.rate_structure.program_adjustments["2_4_units"]}`);
     }
     
     // Calculate final rate
     let finalRate = baseRate + productAdjustment + interestOnlyAdjustment + dscrAdjustment + programAdjustment;
+    console.log(`Rate calculation: ${baseRate} + ${productAdjustment} + ${interestOnlyAdjustment} + ${dscrAdjustment} + ${programAdjustment} = ${finalRate}`);
     
     // Apply minimum rate constraint
     finalRate = Math.max(finalRate, matrix.rate_structure.minimum_rate);
+    console.log(`Final rate after minimum constraint: ${finalRate}`);
     
     // Validate final rate
     if (typeof finalRate !== 'number' || isNaN(finalRate)) {
