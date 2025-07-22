@@ -3,12 +3,13 @@ import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/aut
 import type { LoanApplicationStatus } from '@/types'
 
 interface RouteParams {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 // PUT /api/applications/[id]/status - Update application status
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params
     const { user, error: userError } = await getCurrentUserFromRequest(request)
     
     if (userError || !user) {
@@ -58,7 +59,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { error } = await serverSupabase
       .from('loan_applications')
       .update({ status })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('partner_id', partnerProfile.id)
 
     if (error) {

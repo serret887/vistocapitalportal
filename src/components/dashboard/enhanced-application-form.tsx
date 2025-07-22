@@ -52,6 +52,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
     // Income Information (for homeowner loans)
     total_income: 0,
     income_sources: [],
+    income_documents: [],
     
     // Assets
     total_assets: 0,

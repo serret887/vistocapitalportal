@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
 
 interface RouteParams {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 // GET /api/applications/[id] - Get a specific application
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params
     const { user, error: userError } = await getCurrentUserFromRequest(request)
     
     if (userError || !user) {
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { data: application, error } = await serverSupabase
       .from('loan_applications')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('partner_id', partnerProfile.id)
       .single()
 
@@ -72,6 +73,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PUT /api/applications/[id] - Update a specific application
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params
     const { user, error: userError } = await getCurrentUserFromRequest(request)
     
     if (userError || !user) {
@@ -103,7 +105,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { data: application, error } = await serverSupabase
       .from('loan_applications')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('partner_id', partnerProfile.id)
       .select()
       .single()
@@ -133,6 +135,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/applications/[id] - Delete a specific application
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const { id } = await params
     const { user, error: userError } = await getCurrentUserFromRequest(request)
     
     if (userError || !user) {
@@ -162,7 +165,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { error } = await serverSupabase
       .from('loan_applications')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('partner_id', partnerProfile.id)
 
     if (error) {

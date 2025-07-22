@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
 
 interface RouteParams {
-  params: { fileId: string }
+  params: Promise<{ fileId: string }>
 }
 
 // DELETE /api/files/[fileId] - Delete a file
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    const { fileId } = await params
     const { user, error: userError } = await getCurrentUserFromRequest(request)
     
     if (userError || !user) {
@@ -64,11 +65,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     let updatedDocuments: any[] = []
 
     if (documentType === '1040_tax_return' || documentType.includes('income')) {
-      fileToDelete = application.income_documents?.find((doc: any) => doc.id === params.fileId)
-      updatedDocuments = application.income_documents?.filter((doc: any) => doc.id !== params.fileId) || []
+      fileToDelete = application.income_documents?.find((doc: any) => doc.id === fileId)
+      updatedDocuments = application.income_documents?.filter((doc: any) => doc.id !== fileId) || []
     } else {
-      fileToDelete = application.bank_statements?.find((doc: any) => doc.id === params.fileId)
-      updatedDocuments = application.bank_statements?.filter((doc: any) => doc.id !== params.fileId) || []
+      fileToDelete = application.bank_statements?.find((doc: any) => doc.id === fileId)
+      updatedDocuments = application.bank_statements?.filter((doc: any) => doc.id !== fileId) || []
     }
 
     if (!fileToDelete) {

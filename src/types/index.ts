@@ -223,6 +223,7 @@ export interface LoanApplicationFormData {
   // Income Information (for homeowner loans)
   total_income: number
   income_sources: IncomeSource[]
+  income_documents: File[]
   
   // Assets
   total_assets: number
