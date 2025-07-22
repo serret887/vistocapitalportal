@@ -50,6 +50,12 @@ const data = {
           icon: Calculator,
             isActive: pathname === "/dashboard/mortgage-affordability",
         },
+        {
+          title: "DSCR Calculator",
+          url: "/dashboard/dscr-calculator",
+          icon: Calculator,
+            isActive: pathname === "/dashboard/dscr-calculator",
+        },
       ],
     },
     {

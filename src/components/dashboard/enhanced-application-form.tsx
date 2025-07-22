@@ -205,7 +205,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
           formData.income_sources.forEach((source, index) => {
             if (source.documents.length === 0) {
               newErrors[`income_docs_${index}`] = 'Please upload at least one supporting document for this income source'
-            }
+          }
           })
         }
         break
@@ -921,22 +921,22 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
                   Remove
                 </Button>
               </div>
-            </div>
+      </div>
 
             {/* Document Upload Section for this Income Source */}
             <div className="border-t border-border pt-4">
               <div className="flex items-center justify-between mb-3">
                 <Label className="text-base font-medium visto-dark-blue">Supporting Documents</Label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    multiple
-                    accept=".pdf"
+            <input
+              type="file"
+              multiple
+              accept=".pdf"
                     onChange={(e) => handleIncomeSourceFileUpload(source.id, e)}
-                    className="hidden"
+              className="hidden"
                     id={`income-docs-${source.id}`}
-                  />
-                  <label
+            />
+            <label
                     htmlFor={`income-docs-${source.id}`}
                     className="cursor-pointer"
                   >
@@ -949,13 +949,13 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
                       <Upload className="w-4 h-4 mr-2" />
                       Upload Documents
                     </Button>
-                  </label>
-                </div>
-              </div>
+            </label>
+          </div>
+        </div>
 
               {/* Display uploaded documents */}
               {source.documents.length > 0 && (
-                <div className="space-y-2">
+          <div className="space-y-2">
                   {source.documents.map((file, fileIndex) => (
                     <div key={fileIndex} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
                       <div className="flex items-center gap-2">
@@ -963,28 +963,28 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
                         <span className="text-sm text-gray-700">{file.name}</span>
                         <span className="text-xs text-gray-500">
                           ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                        </span>
-                      </div>
-                      <Button
-                        type="button"
+                  </span>
+                </div>
+                <Button
+                  type="button"
                         variant="ghost"
-                        size="sm"
+                  size="sm"
                         onClick={() => removeIncomeSourceFile(source.id, fileIndex)}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
+                >
                         <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
 
               {source.documents.length === 0 && (
                 <p className="text-sm text-gray-500 italic">
                   No documents uploaded yet. Upload supporting documents for this income source.
                 </p>
               )}
-            </div>
+      </div>
           </Card>
         ))}
       </div>

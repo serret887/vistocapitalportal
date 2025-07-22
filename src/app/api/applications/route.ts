@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     const serverSupabase = createServerSupabaseClient()
-    
+
     // Get partner profile
     const { data: partnerProfile, error: partnerError } = await serverSupabase
       .from('partner_profiles')
@@ -101,10 +101,10 @@ export async function POST(request: NextRequest) {
     const { data: application, error } = await serverSupabase
       .from('loan_applications')
       .insert({
-        partner_id: partnerProfile.id,
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        email: formData.email,
+      partner_id: partnerProfile.id,
+      first_name: formData.first_name,
+      last_name: formData.last_name,
+      email: formData.email,
         phone_number: formData.phone_number,
         property_address: formData.property_address,
         property_is_tbd: formData.property_is_tbd,
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
         income_sources: formData.income_sources,
         total_assets: formData.total_assets,
         bank_accounts: formData.bank_accounts,
-        status: 'in_review'
+      status: 'in_review'
       })
       .select()
       .single()

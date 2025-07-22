@@ -18,6 +18,9 @@ export function DashboardBreadcrumb() {
     if (pathname === '/dashboard/mortgage-affordability') {
       return 'Mortgage Affordability'
     }
+    if (pathname === '/dashboard/dscr-calculator') {
+      return 'DSCR Calculator'
+    }
     return 'My Clients'
   }
 
