@@ -219,8 +219,6 @@ export function calculatePricing(
   // Calculate all fee components
   const brokerOriginationFee = input.brokerComp * input.loanAmount / 100;
   const underwritingFee = matrix.loan_terms.underwriting_fee;
-  const yspFee = yspAdjustment * input.loanAmount / 100; // This is paid by lender to broker, not by borrower
-  const prepayFee = prepayAdjustment * input.loanAmount / 100; // This is only charged if loan is paid off early
   const adminFee = input.brokerAdminFee || 0; // Admin fee from form input
   
   // Total fees should include ALL components EXCEPT YSP (since YSP is paid by lender) and prepay (since it's only charged on early payoff)

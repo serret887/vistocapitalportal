@@ -91,13 +91,8 @@ export interface PricingCalculationResult {
   totalPoints: number;
   monthlyPayment: number;
   totalFees: number;
-  feeBreakdown: {
-    originationFee: number;
-    underwritingFee: number;
-    smallLoanFee?: number;
-    adminFee: number;
-  };
-  adjustments: {
+  breakdown: {
+    baseRate: number;
     productAdjustment: number;
     interestOnlyAdjustment: number;
     dscrAdjustment: number;
@@ -106,6 +101,16 @@ export interface PricingCalculationResult {
     loanSizeAdjustment: number;
     yspAdjustment: number;
     prepayAdjustment: number;
+    discountPoints: number;
+  };
+  feeBreakdown: {
+    originationFee: number;
+    underwritingFee: number;
+    yspFee: number;
+    prepayFee: number;
+    loanSizeAdjustmentFee: number;
+    smallLoanFee?: number;
+    adminFee: number;
   };
 }
 
@@ -174,4 +179,4 @@ export interface PricingResponse {
   data?: PricingResult[];
   error?: string;
   validation?: LoanValidationResult;
-}
+} 

@@ -14,7 +14,7 @@ export function validateLoanEligibility(
   // State validation
   if (matrix.meta.not_available_in_states.includes(input.propertyState)) {
     errors.push(`❌ Property state "${input.propertyState}" is not eligible for this loan program. 
-    🔧 SOLUTION: Choose a different state. Available states: ${matrix.meta.not_available_in_states.join(', ')}`);
+    🔧 SOLUTION: Choose a different state. This program is not available in: ${matrix.meta.not_available_in_states.join(', ')}`);
   }
 
   // Property value validation

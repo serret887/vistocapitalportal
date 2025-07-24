@@ -8,6 +8,8 @@ interface ValidationErrorCardProps {
 }
 
 export function ValidationErrorCard({ validation }: ValidationErrorCardProps) {
+  
+  
   if (validation.isValid) {
     return null;
   }
@@ -34,6 +36,11 @@ export function ValidationErrorCard({ validation }: ValidationErrorCardProps) {
                   <div className="text-xs text-red-800 whitespace-pre-line leading-relaxed">
                     {error}
                   </div>
+                  {/* Debug: Show raw error text */}
+                  <div className="text-xs text-gray-500 mt-1">
+                    Raw error: {JSON.stringify(error)}
+                  </div>
+
                 </div>
               ))}
             </div>

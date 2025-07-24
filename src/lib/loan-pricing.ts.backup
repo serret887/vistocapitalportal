@@ -25,6 +25,9 @@ export interface LoanOption {
   feeBreakdown: {
     originationFee: number;
     underwritingFee: number;
+    yspFee: number;
+    prepayFee: number;
+    loanSizeAdjustmentFee: number;
     smallLoanFee?: number;
     adminFee: number;
   };
@@ -136,11 +139,11 @@ export async function getLoanPricing(request: LoanPricingRequest): Promise<Prici
       body: JSON.stringify(request),
     });
 
-    const data = await response.json();
-    
-    // Always return the response data, even if it's an error response
-    // This allows the frontend to handle validation errors properly
-    return data;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
   } catch (error) {
     console.error('Error fetching loan pricing:', error);
     throw error;

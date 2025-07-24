@@ -117,16 +117,16 @@ export class PricingService {
             totalFees: pricingResult.totalFees,
             termYears: 30, // Extract from matrix.loan_terms.term
             breakdown: {
-              baseRate: pricingResult.breakdown.baseRate,
+              baseRate: pricingResult.baseRate,
               ficoAdjustment: 0, // Not used in current matrix
               ltvAdjustment: 0, // Not used in current matrix
-              productAdjustment: pricingResult.breakdown.productAdjustment,
-              dscrAdjustment: pricingResult.breakdown.dscrAdjustment,
-              originationFeeAdjustment: pricingResult.breakdown.originationFeeAdjustment,
-              loanSizeAdjustment: pricingResult.breakdown.loanSizeAdjustment,
-              programAdjustment: pricingResult.breakdown.programAdjustment,
-              interestOnlyAdjustment: pricingResult.breakdown.interestOnlyAdjustment,
-              yspAdjustment: pricingResult.breakdown.yspAdjustment,
+              productAdjustment: pricingResult.adjustments.productAdjustment,
+              dscrAdjustment: pricingResult.adjustments.dscrAdjustment,
+              originationFeeAdjustment: pricingResult.adjustments.originationFeeAdjustment,
+              loanSizeAdjustment: pricingResult.adjustments.loanSizeAdjustment,
+              programAdjustment: pricingResult.adjustments.programAdjustment,
+              interestOnlyAdjustment: pricingResult.adjustments.interestOnlyAdjustment,
+              yspAdjustment: pricingResult.adjustments.yspAdjustment,
             },
             feeBreakdown: pricingResult.feeBreakdown,
             validation

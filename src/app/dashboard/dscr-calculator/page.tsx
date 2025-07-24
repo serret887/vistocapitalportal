@@ -126,6 +126,23 @@ export default function DSCRCalculator() {
   const [validationErrors, setValidationErrors] = useState<LoanValidationResult[]>([]);
   const [matrixRequirements, setMatrixRequirements] = useState<any>(null);
 
+  // Debug effect for validation errors
+  useEffect(() => {
+    console.log('Validation errors state changed:', validationErrors);
+    console.log('Validation errors length:', validationErrors.length);
+    console.log('Any invalid validations:', validationErrors.some(v => !v.isValid));
+  }, [validationErrors]);
+
+  // Temporary test: Set validation errors for testing
+  useEffect(() => {
+    // Uncomment this to test validation error display
+    // setValidationErrors([{
+    //   isValid: false,
+    //   errors: ['Test error: LTV is too high'],
+    //   warnings: ['Test warning: Consider increasing down payment']
+    // }]);
+  }, []);
+
   // Utility function to handle number input formatting
   const handleNumberInput = (value: string, setter: (value: number) => void) => {
     // Remove all non-numeric characters except decimal point
@@ -154,19 +171,27 @@ export default function DSCRCalculator() {
   };
 
   const handlePropertyValueChange = (value: number) => {
-    setFormData({...formData, estimatedHomeValue: value});
     if (formData.transactionType === "Purchase") {
       const downPaymentAmount = (value * formData.downPayment) / 100;
       const newLoanAmount = value - downPaymentAmount;
-      setFormData(prev => ({...prev, loanAmount: Math.round(newLoanAmount)}));
+      setFormData(prev => ({
+        ...prev, 
+        estimatedHomeValue: value,
+        loanAmount: Math.round(newLoanAmount)
+      }));
+    } else {
+      setFormData(prev => ({...prev, estimatedHomeValue: value}));
     }
   };
 
   const handleDownPaymentChange = (value: number) => {
-    setFormData({...formData, downPayment: value});
     const downPaymentAmount = (formData.estimatedHomeValue * value) / 100;
     const newLoanAmount = formData.estimatedHomeValue - downPaymentAmount;
-    setFormData(prev => ({...prev, loanAmount: Math.round(newLoanAmount)}));
+    setFormData(prev => ({
+      ...prev, 
+      downPayment: value,
+      loanAmount: Math.round(newLoanAmount)
+    }));
   };
 
   const calculateDSCR = () => {
@@ -290,7 +315,11 @@ export default function DSCRCalculator() {
       
       // Check for validation errors
       if (!pricingResponse.success) {
+        console.log('API returned success: false');
+        console.log('Full pricing response:', pricingResponse);
+        
         if (pricingResponse.validation) {
+          console.log('Found validation object:', pricingResponse.validation);
           setValidationErrors([pricingResponse.validation]);
           console.log('Validation errors set:', pricingResponse.validation);
           
@@ -303,6 +332,8 @@ export default function DSCRCalculator() {
             not_available_in_states: ["AK", "MN", "NE", "NV", "ND", "OR", "SD", "UT", "VT"],
             property_types: ["1-4 Unit SFR", "Townhomes", "Condos"]
           });
+        } else {
+          console.log('No validation object found in response');
         }
         console.error('Loan pricing failed:', pricingResponse.error);
         return;
@@ -325,12 +356,19 @@ export default function DSCRCalculator() {
       });
     } catch (error) {
       console.error('Error calculating:', error);
-      // Set a generic error if the API call fails
-      setValidationErrors([{
-        isValid: false,
-        errors: ['Unable to calculate loan options. Please check your input and try again.'],
-        warnings: []
-      }]);
+      
+      // Check if the error contains validation information
+      if (error && typeof error === 'object' && 'validation' in error) {
+        // If the error has validation data, use it
+        setValidationErrors([(error as any).validation]);
+      } else {
+        // Set a generic error if the API call fails
+        setValidationErrors([{
+          isValid: false,
+          errors: ['Unable to calculate loan options. Please check your input and try again.'],
+          warnings: []
+        }]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -517,13 +555,13 @@ export default function DSCRCalculator() {
 
                 <div>
                   <Label htmlFor="estimatedHomeValue" className="text-xs font-medium">Estimated Home Value</Label>
-                  <Input
-                    type="text"
-                    value={formatDisplayValue(formData.estimatedHomeValue)}
-                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, estimatedHomeValue: value}))}
-                    placeholder="200000"
-                    className="h-8 text-xs"
-                  />
+                                      <Input
+                      type="text"
+                      value={formatDisplayValue(formData.estimatedHomeValue)}
+                      onChange={(e) => handleNumberInput(e.target.value, handlePropertyValueChange)}
+                      placeholder="200000"
+                      className="h-8 text-xs"
+                    />
                 </div>
 
                 <div>
@@ -544,7 +582,7 @@ export default function DSCRCalculator() {
                       <Input
                         type="text"
                         value={formatDisplayValue(formData.downPayment)}
-                        onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, downPayment: value}))}
+                        onChange={(e) => handleNumberInput(e.target.value, handleDownPaymentChange)}
                         placeholder="20"
                         className="h-8 text-xs"
                       />
@@ -847,7 +885,7 @@ export default function DSCRCalculator() {
             </CardHeader>
             <CardContent>
               {/* Show validation errors if any */}
-              {validationErrors.length > 0 && validationErrors.some(v => !v.isValid) ? (
+              {validationErrors.length > 0 ? (
                 <div className="space-y-4">
                   {validationErrors.map((validation, index) => (
                     <ValidationErrorCard key={index} validation={validation} />
