@@ -36,6 +36,66 @@ interface DSCRResults {
   cashFlow: number;
 }
 
+// State mapping: full name for display, state symbol for value
+const STATE_MAPPING = [
+  { name: 'Alabama', value: 'AL' },
+  { name: 'Alaska', value: 'AK' },
+  { name: 'Arizona', value: 'AZ' },
+  { name: 'Arkansas', value: 'AR' },
+  { name: 'California', value: 'CA' },
+  { name: 'Colorado', value: 'CO' },
+  { name: 'Connecticut', value: 'CT' },
+  { name: 'Delaware', value: 'DE' },
+  { name: 'Florida', value: 'FL' },
+  { name: 'Georgia', value: 'GA' },
+  { name: 'Hawaii', value: 'HI' },
+  { name: 'Idaho', value: 'ID' },
+  { name: 'Illinois', value: 'IL' },
+  { name: 'Indiana', value: 'IN' },
+  { name: 'Iowa', value: 'IA' },
+  { name: 'Kansas', value: 'KS' },
+  { name: 'Kentucky', value: 'KY' },
+  { name: 'Louisiana', value: 'LA' },
+  { name: 'Maine', value: 'ME' },
+  { name: 'Maryland', value: 'MD' },
+  { name: 'Massachusetts', value: 'MA' },
+  { name: 'Michigan', value: 'MI' },
+  { name: 'Minnesota', value: 'MN' },
+  { name: 'Mississippi', value: 'MS' },
+  { name: 'Missouri', value: 'MO' },
+  { name: 'Montana', value: 'MT' },
+  { name: 'Nebraska', value: 'NE' },
+  { name: 'Nevada', value: 'NV' },
+  { name: 'New Hampshire', value: 'NH' },
+  { name: 'New Jersey', value: 'NJ' },
+  { name: 'New Mexico', value: 'NM' },
+  { name: 'New York', value: 'NY' },
+  { name: 'North Carolina', value: 'NC' },
+  { name: 'North Dakota', value: 'ND' },
+  { name: 'Ohio', value: 'OH' },
+  { name: 'Oklahoma', value: 'OK' },
+  { name: 'Oregon', value: 'OR' },
+  { name: 'Pennsylvania', value: 'PA' },
+  { name: 'Rhode Island', value: 'RI' },
+  { name: 'South Carolina', value: 'SC' },
+  { name: 'South Dakota', value: 'SD' },
+  { name: 'Tennessee', value: 'TN' },
+  { name: 'Texas', value: 'TX' },
+  { name: 'Utah', value: 'UT' },
+  { name: 'Vermont', value: 'VT' },
+  { name: 'Virginia', value: 'VA' },
+  { name: 'Washington', value: 'WA' },
+  { name: 'West Virginia', value: 'WV' },
+  { name: 'Wisconsin', value: 'WI' },
+  { name: 'Wyoming', value: 'WY' }
+];
+
+// Helper function to get state name from state symbol
+const getStateName = (stateSymbol: string): string => {
+  const state = STATE_MAPPING.find(s => s.value === stateSymbol);
+  return state ? state.name : stateSymbol;
+};
+
 export default function DSCRCalculator() {
   const [formData, setFormData] = useState({
     transactionType: "Purchase",
@@ -47,7 +107,7 @@ export default function DSCRCalculator() {
     downPayment: 20,
     remainingMortgage: 120000,
     acquisitionDate: "",
-    prepaymentPenalty: "None",
+    prepaymentPenalty: "5/4/3/2/1",
     brokerPoints: 1.0,
     brokerAdminFee: 995,
     monthlyRentalIncome: 2500,
@@ -55,7 +115,7 @@ export default function DSCRCalculator() {
     annualPropertyTaxes: 2400,
     monthlyHoaFee: 0,
     discountPoints: 0,
-    brokerYsp: 0,
+    brokerYsp: 1.0, // Changed from 0 to 1.0 to match matrix values
   });
 
   const [results, setResults] = useState<DSCRResults | null>(null);
@@ -342,7 +402,7 @@ export default function DSCRCalculator() {
       downPayment: 20,
       remainingMortgage: 120000,
       acquisitionDate: "",
-      prepaymentPenalty: "None",
+      prepaymentPenalty: "5/4/3/2/1",
       brokerPoints: 1.0,
       brokerAdminFee: 995,
       monthlyRentalIncome: 2500,
@@ -350,7 +410,7 @@ export default function DSCRCalculator() {
       annualPropertyTaxes: 2400,
       monthlyHoaFee: 0,
       discountPoints: 0,
-      brokerYsp: 0,
+      brokerYsp: 1.0, // Changed from 0 to 1.0 to match matrix values
     });
     setResults(null);
     setLoanOptions([]);
@@ -415,8 +475,8 @@ export default function DSCRCalculator() {
                   <Select value={formData.transactionType} onValueChange={(value) => {
                     setFormData({...formData, transactionType: value});
                     setNeedsRecalculation(true);
-                    setValidationErrors([]); // Clear validation errors
-                    setMatrixRequirements(null); // Clear matrix requirements
+                    setValidationErrors([]);
+                    setMatrixRequirements(null);
                   }}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
@@ -434,6 +494,8 @@ export default function DSCRCalculator() {
                   <Select value={formData.ficoScore} onValueChange={(value) => {
                     setFormData({...formData, ficoScore: value});
                     setNeedsRecalculation(true);
+                    setValidationErrors([]);
+                    setMatrixRequirements(null);
                   }}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
@@ -490,24 +552,25 @@ export default function DSCRCalculator() {
 
                     <div>
                       <Label htmlFor="prepaymentPenalty" className="text-xs font-medium">Prepayment Penalty</Label>
-                      <Select value={formData.prepaymentPenalty} onValueChange={(value) => {
-                        setFormData({...formData, prepaymentPenalty: value});
-                        setNeedsRecalculation(true);
-                      }}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5/5/5/5/5">5/5/5/5/5</SelectItem>
-                          <SelectItem value="3/3/3">3/3/3</SelectItem>
-                          <SelectItem value="5/4/3/2/1">5/4/3/2/1</SelectItem>
-                          <SelectItem value="3/2/1">3/2/1</SelectItem>
-                          <SelectItem value="3/0/0">3/0/0</SelectItem>
-                          <SelectItem value="0/0/0">0/0/0</SelectItem>
-                          <SelectItem value="None">None</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <Select value={formData.prepaymentPenalty} onValueChange={(value) => {
+                    setFormData({...formData, prepaymentPenalty: value});
+                    setNeedsRecalculation(true);
+                    setValidationErrors([]);
+                    setMatrixRequirements(null);
+                  }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5/5/5/5/5">5/5/5/5/5</SelectItem>
+                      <SelectItem value="3/3/3">3/3/3</SelectItem>
+                      <SelectItem value="5/4/3/2/1">5/4/3/2/1</SelectItem>
+                      <SelectItem value="3/2/1">3/2/1</SelectItem>
+                      <SelectItem value="3/0/0">3/0/0</SelectItem>
+                      <SelectItem value="0/0/0">0/0/0</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                   </>
                 )}
 
@@ -540,24 +603,25 @@ export default function DSCRCalculator() {
 
                     <div>
                       <Label htmlFor="prepaymentPenalty" className="text-xs font-medium">Prepayment Penalty</Label>
-                      <Select value={formData.prepaymentPenalty} onValueChange={(value) => {
-                        setFormData({...formData, prepaymentPenalty: value});
-                        setNeedsRecalculation(true);
-                      }}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5/5/5/5/5">5/5/5/5/5</SelectItem>
-                          <SelectItem value="3/3/3">3/3/3</SelectItem>
-                          <SelectItem value="5/4/3/2/1">5/4/3/2/1</SelectItem>
-                          <SelectItem value="3/2/1">3/2/1</SelectItem>
-                          <SelectItem value="3/0/0">3/0/0</SelectItem>
-                          <SelectItem value="0/0/0">0/0/0</SelectItem>
-                          <SelectItem value="None">None</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <Select value={formData.prepaymentPenalty} onValueChange={(value) => {
+                    setFormData({...formData, prepaymentPenalty: value});
+                    setNeedsRecalculation(true);
+                    setValidationErrors([]);
+                    setMatrixRequirements(null);
+                  }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5/5/5/5/5">5/5/5/5/5</SelectItem>
+                      <SelectItem value="3/3/3">3/3/3</SelectItem>
+                      <SelectItem value="5/4/3/2/1">5/4/3/2/1</SelectItem>
+                      <SelectItem value="3/2/1">3/2/1</SelectItem>
+                      <SelectItem value="3/0/0">3/0/0</SelectItem>
+                      <SelectItem value="0/0/0">0/0/0</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                   </>
                 )}
               </div>
@@ -579,13 +643,17 @@ export default function DSCRCalculator() {
                   <Select value={formData.propertyState} onValueChange={(value) => {
                     setFormData({...formData, propertyState: value});
                     setNeedsRecalculation(true);
+                    setValidationErrors([]);
+                    setMatrixRequirements(null);
                   }}>
                     <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
+                      <SelectValue placeholder="Select state">
+                        {formData.propertyState ? getStateName(formData.propertyState) : "Select state"}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {US_STATES.map((state) => (
-                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      {STATE_MAPPING.map((state) => (
+                        <SelectItem key={state.value} value={state.value}>{state.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -596,12 +664,15 @@ export default function DSCRCalculator() {
                   <Select value={formData.propertyType} onValueChange={(value) => {
                     setFormData({...formData, propertyType: value});
                     setNeedsRecalculation(true);
+                    setValidationErrors([]);
+                    setMatrixRequirements(null);
                   }}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Single Family">Single Family</SelectItem>
+                      <SelectItem value="Multi Family">Multi Family (5+ units)</SelectItem>
                       <SelectItem value="Condo">Condo</SelectItem>
                       <SelectItem value="Townhouse">Townhouse</SelectItem>
                     </SelectContent>
@@ -695,6 +766,8 @@ export default function DSCRCalculator() {
                   <Select value={formData.discountPoints.toString()} onValueChange={(value) => {
                     setFormData({...formData, discountPoints: Number(value)});
                     setNeedsRecalculation(true);
+                    setValidationErrors([]);
+                    setMatrixRequirements(null);
                   }}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
@@ -716,6 +789,8 @@ export default function DSCRCalculator() {
                   <Select value={formData.brokerYsp.toString()} onValueChange={(value) => {
                     setFormData({...formData, brokerYsp: Number(value)});
                     setNeedsRecalculation(true);
+                    setValidationErrors([]);
+                    setMatrixRequirements(null);
                   }}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
@@ -742,6 +817,14 @@ export default function DSCRCalculator() {
               >
                 {isLoading ? "Calculating..." : "Calculate DSCR"}
               </Button>
+              
+              {needsRecalculation && (
+                <div className="mt-2 text-center">
+                  <Badge variant="destructive" className="text-xs">
+                    Price Invalid - Recalculate
+                  </Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -820,7 +903,7 @@ export default function DSCRCalculator() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div className="grid grid-cols-3 gap-4 text-xs">
                         <div>
                           <span className="text-gray-500">Monthly Payment:</span>
                           <div className="font-semibold text-sm">
@@ -833,7 +916,48 @@ export default function DSCRCalculator() {
                             ${option.totalFees ? option.totalFees.toLocaleString() : 'N/A'}
                           </div>
                         </div>
+                        <div>
+                          <span className="text-gray-500">Broker Comp:</span>
+                          <div className="font-semibold text-sm text-green-600">
+                            ${((formData.brokerPoints + formData.brokerYsp) * formData.loanAmount / 100 + formData.brokerAdminFee).toLocaleString()}
+                          </div>
+                        </div>
                       </div>
+                      
+                      {/* Fee Breakdown Accordion */}
+                      <Accordion type="single" collapsible className="mt-3">
+                        <AccordionItem value="fee-breakdown" className="border-none">
+                          <AccordionTrigger className="text-xs text-blue-600 hover:text-blue-700 py-1">
+                            View Fee Breakdown
+                          </AccordionTrigger>
+                          <AccordionContent className="pt-2">
+                            <div className="space-y-2 text-xs bg-gray-50 p-3 rounded">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Broker Origination Fee:</span>
+                                <span className="font-medium">${option.feeBreakdown?.originationFee?.toLocaleString() || '0'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Underwriting Fee:</span>
+                                <span className="font-medium">${option.feeBreakdown?.underwritingFee?.toLocaleString() || '0'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Admin Fee:</span>
+                                <span className="font-medium">${option.feeBreakdown?.adminFee?.toLocaleString() || '0'}</span>
+                              </div>
+                              {option.feeBreakdown?.smallLoanFee && option.feeBreakdown.smallLoanFee > 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Small Loan Fee:</span>
+                                  <span className="font-medium">${option.feeBreakdown.smallLoanFee.toLocaleString()}</span>
+                                </div>
+                              )}
+                              <div className="border-t pt-2 flex justify-between font-semibold">
+                                <span>Total Fees:</span>
+                                <span>${option.totalFees?.toLocaleString() || '0'}</span>
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
                     </div>
                   ))}
                 </div>
@@ -986,21 +1110,66 @@ export default function DSCRCalculator() {
                       <span>Down Payment:</span>
                       <span className="font-semibold">${(formData.estimatedHomeValue - formData.loanAmount).toLocaleString()}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Loan Fees:</span>
-                      <span className="font-semibold">${selectedLoan.totalFees.toLocaleString()}</span>
+                    
+                    {/* Detailed Fee Breakdown */}
+                    <div className="border-t pt-2">
+                      <div className="text-xs font-medium text-gray-700 mb-2">Loan Fees Breakdown:</div>
+                      <div className="space-y-1 pl-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">• Origination Fee ({formData.brokerPoints}%):</span>
+                          <span>${selectedLoan.feeBreakdown?.originationFee?.toLocaleString() || '0'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">• Underwriting Fee:</span>
+                          <span>${selectedLoan.feeBreakdown?.underwritingFee?.toLocaleString() || '0'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">• Admin Fee:</span>
+                          <span>${selectedLoan.feeBreakdown?.adminFee?.toLocaleString() || '0'}</span>
+                        </div>
+                        {selectedLoan.feeBreakdown?.smallLoanFee && selectedLoan.feeBreakdown.smallLoanFee > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">• Small Loan Fee:</span>
+                            <span>${selectedLoan.feeBreakdown.smallLoanFee.toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="border-t mt-2 pt-2 flex justify-between font-semibold">
+                        <span>Total Fees:</span>
+                        <span>${selectedLoan.totalFees.toLocaleString()}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Broker Admin Fee:</span>
-                      <span className="font-semibold">${formData.brokerAdminFee.toLocaleString()}</span>
+                    
+                    {/* Broker Compensation Section */}
+                    <div className="border-t pt-2">
+                      <div className="text-xs font-medium text-gray-700 mb-2">Broker Compensation (Included in Loan Fees):</div>
+                      <div className="space-y-1 pl-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">• Broker Points ({formData.brokerPoints}%):</span>
+                          <span>${(formData.brokerPoints * formData.loanAmount / 100).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">• Admin Fee:</span>
+                          <span>${formData.brokerAdminFee.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">• YSP ({formData.brokerYsp}%):</span>
+                          <span>${(formData.brokerYsp * formData.loanAmount / 100).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="border-t mt-2 pt-2 flex justify-between font-semibold">
+                        <span>Total Broker Compensation:</span>
+                        <span>${((formData.brokerPoints + formData.brokerYsp) * formData.loanAmount / 100 + formData.brokerAdminFee).toLocaleString()}</span>
+                      </div>
                     </div>
+                    
                     <div className="flex justify-between">
                       <span>Estimated Third-Party Fees:</span>
                       <span className="font-semibold">${(formData.loanAmount * 0.015).toLocaleString()}</span>
                     </div>
                     <div className="border-t pt-2 flex justify-between font-bold">
                       <span>Total Cash to Close:</span>
-                      <span>${((formData.estimatedHomeValue - formData.loanAmount) + selectedLoan.totalFees + formData.brokerAdminFee + (formData.loanAmount * 0.015)).toLocaleString()}</span>
+                      <span>${((formData.estimatedHomeValue - formData.loanAmount) + selectedLoan.totalFees + (formData.loanAmount * 0.015)).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

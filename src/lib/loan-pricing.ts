@@ -29,6 +29,7 @@ export interface LoanOption {
     prepayFee: number;
     loanSizeAdjustmentFee: number;
     smallLoanFee?: number;
+    adminFee: number;
   };
 }
 
@@ -77,7 +78,7 @@ export function convertFormDataToPricingRequest(formData: FormData): LoanPricing
     'Single Family': '1-4 Unit SFR',
     'Condo': 'Condos',
     'Townhouse': 'Townhomes'
-    // 'Multi Family' is intentionally not mapped
+    // 'Multi Family' is intentionally not mapped - not eligible for this loan program
   };
   const propertyType = propertyTypeMap[formData.propertyType] || formData.propertyType;
 
@@ -98,6 +99,7 @@ export function convertFormDataToPricingRequest(formData: FormData): LoanPricing
       brokerComp: formData.brokerPoints,
       ysp: formData.brokerYsp || 1.0, // Use form data or default to 1.0
       discountPoints: formData.discountPoints || 0, // Use form data or default to 0
+      brokerAdminFee: formData.brokerAdminFee, // Add admin fee to the request
       estimatedHomeValue: formData.estimatedHomeValue,
       monthlyRentalIncome: formData.monthlyRentalIncome,
       annualPropertyInsurance: formData.annualPropertyInsurance,

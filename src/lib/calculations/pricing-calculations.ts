@@ -105,6 +105,15 @@ export function calculateLoanSizeAdjustment(
 ): number {
   const adjustments = matrix.rate_structure.loan_size_adjustments;
   const range = findLTVRange(adjustments, loanAmount);
+  
+  // Debug logging for loan size adjustment
+  console.log('Loan Size Adjustment Debug:', {
+    loanAmount,
+    availableRanges: Object.keys(adjustments),
+    foundRange: range,
+    adjustment: range ? adjustments[range] : 0
+  });
+  
   return range ? adjustments[range] : 0;
 }
 
@@ -112,17 +121,30 @@ export function calculateYSPAdjustment(
   matrix: VisioPricingMatrix,
   ysp: number
 ): number {
-  const yspKey = ysp.toString();
-  return matrix.broker_payout_add_ons[yspKey] || 0;
+  // YSP should be a direct percentage of the loan amount, not a matrix lookup
+  // The matrix lookup is for rate adjustments, not fee calculations
+  return ysp; // Return the YSP percentage directly
 }
 
-export function calculatePrepayAdjustment(
-  matrix: VisioPricingMatrix,
-  prepayStructure: string
-): number {
+export function calculatePrepayAdjustment(matrix: VisioPricingMatrix, prepayStructure: string): number {
   const prepayStructures = matrix.rate_structure.prepay_penalty_structures;
-  const adjustment = prepayStructures[prepayStructure];
-  return typeof adjustment === 'number' ? adjustment : 0;
+  
+  // If prepayStructure is "None", return 0 (no adjustment)
+  if (prepayStructure === "None") {
+    return 0;
+  }
+  
+  // Look up the rate adjustment for the selected prepayment penalty structure
+  const adjustment = prepayStructures[prepayStructure as keyof typeof prepayStructures];
+  
+  // If adjustment is a number, return it; otherwise return 0
+  if (typeof adjustment === 'number') {
+    console.log(`Prepay Adjustment Debug: ${prepayStructure} = ${adjustment} points`);
+    return adjustment;
+  }
+  
+  console.log(`Prepay Adjustment Debug: ${prepayStructure} not found in matrix, returning 0`);
+  return 0;
 }
 
 export function calculateSmallLoanFee(
@@ -177,11 +199,14 @@ export function calculatePricing(
   // Apply minimum rate constraint
   finalRate = Math.max(finalRate, matrix.rate_structure.minimum_rate);
   
-  // Calculate points
+  // Calculate total rate adjustments (points added to base rate)
+  const totalRateAdjustments = productAdjustment + interestOnlyAdjustment + dscrAdjustment + 
+                               programAdjustment + originationFeeAdjustment + loanSizeAdjustment;
+  
+  // Calculate YSP and prepay adjustments (these are separate from rate adjustments)
   const yspAdjustment = calculateYSPAdjustment(matrix, input.ysp);
   const prepayAdjustment = calculatePrepayAdjustment(matrix, input.prepayStructure);
   const discountPoints = input.discountPoints || 0;
-  const totalPoints = yspAdjustment + prepayAdjustment + discountPoints;
   
   // Calculate monthly payment
   const termMatch = matrix.loan_terms.term.match(/(\d+)/);
@@ -190,16 +215,40 @@ export function calculatePricing(
   
   // Calculate fees
   const smallLoanFee = calculateSmallLoanFee(matrix, input.loanAmount);
-  const totalFees = (totalPoints / 100) * input.loanAmount + matrix.loan_terms.underwriting_fee + smallLoanFee;
   
+  // Calculate all fee components
+  const brokerOriginationFee = input.brokerComp * input.loanAmount / 100;
+  const underwritingFee = matrix.loan_terms.underwriting_fee;
+  const yspFee = yspAdjustment * input.loanAmount / 100; // This is paid by lender to broker, not by borrower
+  const prepayFee = prepayAdjustment * input.loanAmount / 100; // This is only charged if loan is paid off early
+  const adminFee = input.brokerAdminFee || 0; // Admin fee from form input
+  
+  // Total fees should include ALL components EXCEPT YSP (since YSP is paid by lender) and prepay (since it's only charged on early payoff)
+  // Note: loanSizeAdjustment is a RATE adjustment, not a fee, so it's not included here
+  const totalFees = brokerOriginationFee + underwritingFee + smallLoanFee + adminFee;
+  
+  // Debug logging for fee calculation
+  console.log('Fee Calculation Debug:', {
+    brokerOriginationFee,
+    underwritingFee,
+    smallLoanFee,
+    adminFee,
+    totalFees
+  });
+
   return {
     baseRate,
     finalRate,
-    totalPoints,
+    totalPoints: totalRateAdjustments, // Changed from totalPoints to totalRateAdjustments
     monthlyPayment,
     totalFees,
-    breakdown: {
-      baseRate,
+    feeBreakdown: {
+      originationFee: brokerOriginationFee,
+      underwritingFee,
+      smallLoanFee,
+      adminFee
+    },
+    adjustments: {
       productAdjustment,
       interestOnlyAdjustment,
       dscrAdjustment,
@@ -207,16 +256,7 @@ export function calculatePricing(
       originationFeeAdjustment,
       loanSizeAdjustment,
       yspAdjustment,
-      prepayAdjustment,
-      discountPoints,
-    },
-    feeBreakdown: {
-      originationFee: input.brokerComp * input.loanAmount / 100,
-      underwritingFee: matrix.loan_terms.underwriting_fee,
-      yspFee: yspAdjustment * input.loanAmount / 100,
-      prepayFee: prepayAdjustment * input.loanAmount / 100,
-      loanSizeAdjustmentFee: loanSizeAdjustment * input.loanAmount / 100,
-      smallLoanFee,
+      prepayAdjustment
     }
   };
 } 

@@ -110,6 +110,7 @@ export interface PricingCalculationResult {
     prepayFee: number;
     loanSizeAdjustmentFee: number;
     smallLoanFee?: number;
+    adminFee: number;
   };
 }
 
@@ -131,6 +132,7 @@ export interface LoanPricingRequest {
     brokerComp: number;
     ysp: number;
     discountPoints: number;
+    brokerAdminFee: number;
     estimatedHomeValue: number;
     monthlyRentalIncome: number;
     annualPropertyInsurance: number;
@@ -166,10 +168,8 @@ export interface PricingResult {
   feeBreakdown: {
     originationFee: number;
     underwritingFee: number;
-    yspFee: number;
-    prepayFee: number;
-    loanSizeAdjustmentFee: number;
     smallLoanFee?: number;
+    adminFee: number;
   };
   validation?: LoanValidationResult;
 }
