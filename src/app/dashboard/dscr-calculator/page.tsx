@@ -15,10 +15,13 @@ import {
   User as UserIcon,
   DollarSign as DollarSignIcon,
   Calculator as CalculatorIcon,
-  CreditCard as CreditCardIcon
+  CreditCard as CreditCardIcon,
+  Home as HomeIcon
 } from "lucide-react";
 import { US_STATES } from "@/types";
 import { generateLoanOptions, LoanOption } from "@/lib/loan-pricing";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DSCRResults {
   noi: number;
@@ -33,7 +36,7 @@ interface DSCRResults {
 export default function DSCRCalculator() {
   const [formData, setFormData] = useState({
     transactionType: "Purchase",
-    propertyState: "CA",
+    propertyState: "FL",
     propertyType: "Single Family",
     ficoScore: "740-759",
     estimatedHomeValue: 200000,
@@ -54,6 +57,7 @@ export default function DSCRCalculator() {
   const [loanOptions, setLoanOptions] = useState<LoanOption[]>([]);
   const [selectedLoan, setSelectedLoan] = useState<LoanOption | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [needsRecalculation, setNeedsRecalculation] = useState(false);
 
   // Utility function to handle number input formatting
   const handleNumberInput = (value: string, setter: (value: number) => void) => {
@@ -71,6 +75,7 @@ export default function DSCRCalculator() {
     const numValue = Number(formattedValue);
     if (!isNaN(numValue)) {
       setter(numValue);
+      setNeedsRecalculation(true);
     }
   };
 
@@ -200,6 +205,9 @@ export default function DSCRCalculator() {
       const options = await generateLoanOptions(formData);
       setLoanOptions(options);
       
+      // Reset recalculation flag
+      setNeedsRecalculation(false);
+      
       console.log('Calculation completed:', {
         loanOptionsCount: options.length,
         options: options.map(opt => ({
@@ -273,7 +281,7 @@ export default function DSCRCalculator() {
   const resetToDefaults = () => {
     setFormData({
       transactionType: "Purchase",
-      propertyState: "CA",
+      propertyState: "FL",
       propertyType: "Single Family",
       ficoScore: "740-759",
       estimatedHomeValue: 200000,
@@ -292,10 +300,16 @@ export default function DSCRCalculator() {
     setResults(null);
     setLoanOptions([]);
     setSelectedLoan(null);
+    setNeedsRecalculation(false);
   };
 
   // Dynamic product name formatting
   const formatProductName = (product: string): string => {
+    // Handle interest-only products (API now returns "30-Year Fixed - Interest Only")
+    if (product.includes('- Interest Only')) {
+      return product; // Already properly formatted from API
+    }
+    
     // Handle common patterns
     if (product.includes('_ARM')) {
       const parts = product.split('_');
@@ -311,7 +325,7 @@ export default function DSCRCalculator() {
       }
     }
     
-    // For other products, convert underscores to spaces and capitalize
+    // For all products, convert underscores to spaces and capitalize
     return product.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
@@ -326,9 +340,9 @@ export default function DSCRCalculator() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 h-[calc(100vh-120px)]">
-        {/* Left Section - 30% for Borrower Cards */}
-        <div className="lg:col-span-3 space-y-4 overflow-y-auto pr-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-120px)]">
+        {/* Column 1: Borrower & Property Information */}
+        <div className="space-y-4 overflow-y-auto pr-2">
           {/* Borrower Information Card */}
           <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50">
             <CardHeader className="pb-3">
@@ -341,7 +355,10 @@ export default function DSCRCalculator() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="transactionType" className="text-xs font-medium">Transaction Type</Label>
-                  <Select value={formData.transactionType} onValueChange={(value) => setFormData({...formData, transactionType: value})}>
+                  <Select value={formData.transactionType} onValueChange={(value) => {
+                    setFormData({...formData, transactionType: value});
+                    setNeedsRecalculation(true);
+                  }}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
@@ -354,37 +371,11 @@ export default function DSCRCalculator() {
                 </div>
 
                 <div>
-                  <Label htmlFor="propertyState" className="text-xs font-medium">Property State</Label>
-                  <Select value={formData.propertyState} onValueChange={(value) => setFormData({...formData, propertyState: value})}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {US_STATES.map((state) => (
-                        <SelectItem key={state} value={state}>{state}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="propertyType" className="text-xs font-medium">Property Type</Label>
-                  <Select value={formData.propertyType} onValueChange={(value) => setFormData({...formData, propertyType: value})}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Single Family">Single Family</SelectItem>
-                      <SelectItem value="Multi Family">Multi Family</SelectItem>
-                      <SelectItem value="Condo">Condo</SelectItem>
-                      <SelectItem value="Townhouse">Townhouse</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
                   <Label htmlFor="ficoScore" className="text-xs font-medium">Est. FICO Score</Label>
-                  <Select value={formData.ficoScore} onValueChange={(value) => setFormData({...formData, ficoScore: value})}>
+                  <Select value={formData.ficoScore} onValueChange={(value) => {
+                    setFormData({...formData, ficoScore: value});
+                    setNeedsRecalculation(true);
+                  }}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
@@ -440,14 +431,20 @@ export default function DSCRCalculator() {
 
                     <div>
                       <Label htmlFor="prepaymentPenalty" className="text-xs font-medium">Prepayment Penalty</Label>
-                      <Select value={formData.prepaymentPenalty} onValueChange={(value) => setFormData({...formData, prepaymentPenalty: value})}>
+                      <Select value={formData.prepaymentPenalty} onValueChange={(value) => {
+                        setFormData({...formData, prepaymentPenalty: value});
+                        setNeedsRecalculation(true);
+                      }}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="7-year term">7-year term</SelectItem>
-                          <SelectItem value="5-year term">5-year term</SelectItem>
-                          <SelectItem value="3-year term">3-year term</SelectItem>
+                          <SelectItem value="5/5/5/5/5">5/5/5/5/5</SelectItem>
+                          <SelectItem value="3/3/3">3/3/3</SelectItem>
+                          <SelectItem value="5/4/3/2/1">5/4/3/2/1</SelectItem>
+                          <SelectItem value="3/2/1">3/2/1</SelectItem>
+                          <SelectItem value="3/0/0">3/0/0</SelectItem>
+                          <SelectItem value="0/0/0">0/0/0</SelectItem>
                           <SelectItem value="None">None</SelectItem>
                         </SelectContent>
                       </Select>
@@ -484,14 +481,20 @@ export default function DSCRCalculator() {
 
                     <div>
                       <Label htmlFor="prepaymentPenalty" className="text-xs font-medium">Prepayment Penalty</Label>
-                      <Select value={formData.prepaymentPenalty} onValueChange={(value) => setFormData({...formData, prepaymentPenalty: value})}>
+                      <Select value={formData.prepaymentPenalty} onValueChange={(value) => {
+                        setFormData({...formData, prepaymentPenalty: value});
+                        setNeedsRecalculation(true);
+                      }}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="7-year term">7-year term</SelectItem>
-                          <SelectItem value="5-year term">5-year term</SelectItem>
-                          <SelectItem value="3-year term">3-year term</SelectItem>
+                          <SelectItem value="5/5/5/5/5">5/5/5/5/5</SelectItem>
+                          <SelectItem value="3/3/3">3/3/3</SelectItem>
+                          <SelectItem value="5/4/3/2/1">5/4/3/2/1</SelectItem>
+                          <SelectItem value="3/2/1">3/2/1</SelectItem>
+                          <SelectItem value="3/0/0">3/0/0</SelectItem>
+                          <SelectItem value="0/0/0">0/0/0</SelectItem>
                           <SelectItem value="None">None</SelectItem>
                         </SelectContent>
                       </Select>
@@ -502,51 +505,51 @@ export default function DSCRCalculator() {
             </CardContent>
           </Card>
 
-          {/* Broker Compensation Card */}
+          {/* Property Information Card */}
           <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <DollarSignIcon className="h-4 w-4 text-green-600" />
-                <h3 className="text-sm font-semibold text-gray-800">Broker Compensation</h3>
+                <HomeIcon className="h-4 w-4 text-green-600" />
+                <h3 className="text-sm font-semibold text-gray-800">Property Information</h3>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="brokerPoints" className="text-xs font-medium">Broker Points</Label>
-                  <Input
-                    type="text"
-                    value={formatDisplayValue(formData.brokerPoints)}
-                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, brokerPoints: value}))}
-                    placeholder="1.0"
-                    className="h-8 text-xs"
-                  />
+                  <Label htmlFor="propertyState" className="text-xs font-medium">Property State</Label>
+                  <Select value={formData.propertyState} onValueChange={(value) => {
+                    setFormData({...formData, propertyState: value});
+                    setNeedsRecalculation(true);
+                  }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {US_STATES.map((state) => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
-                  <Label htmlFor="brokerAdminFee" className="text-xs font-medium">Admin Fee</Label>
-                  <Input
-                    type="text"
-                    value={formatDisplayValue(formData.brokerAdminFee)}
-                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, brokerAdminFee: value}))}
-                    placeholder="995"
-                    className="h-8 text-xs"
-                  />
+                  <Label htmlFor="propertyType" className="text-xs font-medium">Property Type</Label>
+                  <Select value={formData.propertyType} onValueChange={(value) => {
+                    setFormData({...formData, propertyType: value});
+                    setNeedsRecalculation(true);
+                  }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Single Family">Single Family</SelectItem>
+                      <SelectItem value="Multi Family">Multi Family</SelectItem>
+                      <SelectItem value="Condo">Condo</SelectItem>
+                      <SelectItem value="Townhouse">Townhouse</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* DSCR Information Card */}
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <CalculatorIcon className="h-4 w-4 text-purple-600" />
-                <h3 className="text-sm font-semibold text-gray-800">DSCR Information</h3>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="monthlyRentalIncome" className="text-xs font-medium">Monthly Rental Income</Label>
                   <Input
@@ -591,6 +594,41 @@ export default function DSCRCalculator() {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Broker Compensation Card */}
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <DollarSignIcon className="h-4 w-4 text-green-600" />
+                <h3 className="text-sm font-semibold text-gray-800">Broker Compensation</h3>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="brokerPoints" className="text-xs font-medium">Broker Points</Label>
+                  <Input
+                    type="text"
+                    value={formatDisplayValue(formData.brokerPoints)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, brokerPoints: value}))}
+                    placeholder="1.0"
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="brokerAdminFee" className="text-xs font-medium">Admin Fee</Label>
+                  <Input
+                    type="text"
+                    value={formatDisplayValue(formData.brokerAdminFee)}
+                    onChange={(e) => handleNumberInput(e.target.value, (value) => setFormData({...formData, brokerAdminFee: value}))}
+                    placeholder="995"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
 
               <Button 
                 onClick={handleCalculate}
@@ -599,33 +637,24 @@ export default function DSCRCalculator() {
               >
                 {isLoading ? "Calculating..." : "Calculate DSCR"}
               </Button>
-
-              {results && (
-                <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-blue-600">
-                      {results.dscr.toFixed(2)}
-                    </div>
-                    <div className="text-xs text-gray-600">Estimated DSCR</div>
-                    {selectedLoan && selectedLoan.finalRate && (
-                      <div className="text-xs text-gray-500 mt-1">
-                        Based on {selectedLoan.lenderId} {formatProductName(selectedLoan.product)} @ {selectedLoan.finalRate.toFixed(3)}%
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Section - 70% for Loan Items */}
-        <div className="lg:col-span-7 overflow-y-auto">
+        {/* Column 2: Loan Options */}
+        <div className="overflow-y-auto">
           <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 h-full">
             <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <CreditCardIcon className="h-4 w-4 text-indigo-600" />
-                <h3 className="text-sm font-semibold text-gray-800">Available Loan Options</h3>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CreditCardIcon className="h-4 w-4 text-indigo-600" />
+                  <h3 className="text-sm font-semibold text-gray-800">Available Loan Options</h3>
+                </div>
+                {needsRecalculation && (
+                  <Badge variant="destructive" className="text-xs">
+                    Price Invalid - Recalculate
+                  </Badge>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -634,7 +663,7 @@ export default function DSCRCalculator() {
                   {loanOptions.map((option, index) => (
                     <div 
                       key={index} 
-                      className={`p-3 border rounded-lg transition-colors cursor-pointer ${
+                      className={`p-4 border rounded-lg transition-colors cursor-pointer ${
                         selectedLoan?.lenderId === option.lenderId && 
                         selectedLoan?.product === option.product && 
                         selectedLoan?.termYears === option.termYears
@@ -643,17 +672,17 @@ export default function DSCRCalculator() {
                       }`}
                       onClick={() => handleLoanSelect(option)}
                     >
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start mb-3">
                         <div>
                           <h4 className="text-sm font-semibold text-gray-800">
                             {formatProductName(option.product)}
                           </h4>
                           <p className="text-xs text-gray-600">
-                            {option.termYears}-year term
+                            {option.lenderName || option.lenderId} • {option.termYears}-year term
                           </p>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm font-bold text-gray-800">
+                          <div className="text-lg font-bold text-gray-800">
                             {option.finalRate ? option.finalRate.toFixed(3) : 'N/A'}%
                           </div>
                           <div className="text-xs text-gray-500">
@@ -662,22 +691,18 @@ export default function DSCRCalculator() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="grid grid-cols-2 gap-4 text-xs">
                         <div>
                           <span className="text-gray-500">Monthly Payment:</span>
-                          <div className="font-semibold">
+                          <div className="font-semibold text-sm">
                             ${option.monthlyPayment ? option.monthlyPayment.toLocaleString() : 'N/A'}
                           </div>
                         </div>
                         <div>
                           <span className="text-gray-500">Total Fees:</span>
-                          <div className="font-semibold">
+                          <div className="font-semibold text-sm">
                             ${option.totalFees ? option.totalFees.toLocaleString() : 'N/A'}
                           </div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Lender:</span>
-                          <div className="font-semibold capitalize">{option.lenderId || 'N/A'}</div>
                         </div>
                       </div>
                     </div>
@@ -687,6 +712,172 @@ export default function DSCRCalculator() {
                 <div className="text-center py-8 text-gray-500">
                   <CalculatorIcon className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm">Calculate DSCR to see available loan options</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Column 3: DSCR & Calculations */}
+        <div className="space-y-4 overflow-y-auto pl-2">
+          {/* DSCR Results Card */}
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <CalculatorIcon className="h-4 w-4 text-purple-600" />
+                <h3 className="text-sm font-semibold text-gray-800">DSCR Results</h3>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {results ? (
+                <TooltipProvider>
+                  <div className="space-y-4">
+                    <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {results.dscr.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-gray-600">DSCR Ratio</div>
+                      {selectedLoan && selectedLoan.finalRate && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Based on {selectedLoan.lenderName} {formatProductName(selectedLoan.product)} @ {selectedLoan.finalRate.toFixed(2)}%
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-gray-500 cursor-help flex items-center gap-1">
+                              Net Operating Income
+                              <InfoIcon className="h-3 w-3" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Annual rental income minus operating expenses (insurance, taxes, HOA fees). Does not include mortgage payments.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <div className="font-semibold">${results.noi.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      </div>
+                      <div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-gray-500 cursor-help flex items-center gap-1">
+                              Annual Debt Service
+                              <InfoIcon className="h-3 w-3" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Total annual mortgage payments (principal + interest) for the selected loan.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <div className="font-semibold">${results.debtService.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      </div>
+                      <div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-gray-500 cursor-help flex items-center gap-1">
+                              Cap Rate
+                              <InfoIcon className="h-3 w-3" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Net Operating Income divided by property value, expressed as a percentage. Measures property's return on investment.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <div className="font-semibold">{results.capRate.toFixed(2)}%</div>
+                      </div>
+                      <div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-gray-500 cursor-help flex items-center gap-1">
+                              Cash on Cash Return
+                              <InfoIcon className="h-3 w-3" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Annual cash flow divided by total cash invested (down payment), expressed as a percentage.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <div className="font-semibold">{results.cashOnCashReturn.toFixed(2)}%</div>
+                      </div>
+                      <div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-gray-500 cursor-help flex items-center gap-1">
+                              Break-Even Ratio
+                              <InfoIcon className="h-3 w-3" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Total expenses (debt service + operating costs) divided by gross rental income. Below 1.0 means positive cash flow.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <div className="font-semibold">{results.breakEvenRatio.toFixed(2)}</div>
+                      </div>
+                      <div>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-gray-500 cursor-help flex items-center gap-1">
+                              Annual Cash Flow
+                              <InfoIcon className="h-3 w-3" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Net Operating Income minus Annual Debt Service. This is your annual profit after all expenses.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <div className="font-semibold">${results.cashFlow.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      </div>
+                    </div>
+                  </div>
+                </TooltipProvider>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <CalculatorIcon className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm">Calculate DSCR to see results</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Cash to Close Card */}
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <DollarSignIcon className="h-4 w-4 text-green-600" />
+                <h3 className="text-sm font-semibold text-gray-800">Cash to Close</h3>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {results && selectedLoan ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <div className="flex justify-between">
+                      <span>Down Payment:</span>
+                      <span className="font-semibold">${(formData.estimatedHomeValue - formData.loanAmount).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Loan Fees:</span>
+                      <span className="font-semibold">${selectedLoan.totalFees.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Broker Admin Fee:</span>
+                      <span className="font-semibold">${formData.brokerAdminFee.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Estimated Third-Party Fees:</span>
+                      <span className="font-semibold">${(formData.loanAmount * 0.015).toLocaleString()}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-bold">
+                      <span>Total Cash to Close:</span>
+                      <span>${((formData.estimatedHomeValue - formData.loanAmount) + selectedLoan.totalFees + formData.brokerAdminFee + (formData.loanAmount * 0.015)).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  <p className="text-sm">Select a loan option to see cash to close</p>
                 </div>
               )}
             </CardContent>

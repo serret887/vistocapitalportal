@@ -24,6 +24,7 @@ export interface LoanPricingResponse {
 
 export interface LoanOption {
   lenderId: string;
+  lenderName: string;
   product: string;
   baseRate: number;
   finalRate: number;
@@ -37,8 +38,19 @@ export interface LoanOption {
     ltvAdjustment: number;
     productAdjustment: number;
     dscrAdjustment: number;
-    brokerCompAdjustment: number;
+    originationFeeAdjustment: number;
+    loanSizeAdjustment: number;
+    programAdjustment: number;
+    interestOnlyAdjustment: number;
     yspAdjustment: number;
+  };
+  feeBreakdown: {
+    originationFee: number;
+    underwritingFee: number;
+    yspFee: number;
+    prepayFee: number;
+    loanSizeAdjustmentFee: number;
+    // Add other fees as needed
   };
 }
 

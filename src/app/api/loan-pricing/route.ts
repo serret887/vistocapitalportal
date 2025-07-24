@@ -11,7 +11,6 @@ interface PricingRequest {
     propertyType: string;
     occupancyType: string;
     product: string;
-    interestOnly: boolean;
     prepayStructure: string;
     dscr: number;
     brokerComp: number;
@@ -67,6 +66,7 @@ interface VisioPricingMatrix {
 
 interface PricingResult {
   lenderId: string;
+  lenderName: string;
   product: string;
   baseRate: number;
   finalRate: number;
@@ -80,8 +80,19 @@ interface PricingResult {
     ltvAdjustment: number;
     productAdjustment: number;
     dscrAdjustment: number;
-    brokerCompAdjustment: number;
+    originationFeeAdjustment: number;
+    loanSizeAdjustment: number;
+    programAdjustment: number;
+    interestOnlyAdjustment: number;
     yspAdjustment: number;
+  };
+  feeBreakdown: {
+    originationFee: number;
+    underwritingFee: number;
+    yspFee: number;
+    prepayFee: number;
+    loanSizeAdjustmentFee: number;
+    // Add other fees as needed
   };
 }
 
@@ -125,36 +136,59 @@ export async function POST(request: NextRequest) {
     console.log('Pricing matrix found:', pricingData.lender_id);
 
     const matrix: VisioPricingMatrix = pricingData.matrix;
-    
-    // Dynamically extract product types from the pricing matrix
-    const products = Object.keys(matrix.rate_structure.products).filter(product => 
-      // Filter out special adjustments that aren't actual loan products
-      product !== 'Interest_Only' && 
+    console.log('Matrix:', matrix);
+    // Dynamically extract base product types from the pricing matrix
+    const baseProducts = Object.keys(matrix.rate_structure.products).filter(product => 
+      product !== 'Interest_Only' &&
       product !== 'Prepayment_Penalty' &&
       product !== 'Cash_Out' &&
       product !== 'Condo' &&
       product !== '2_4_Units'
     );
     
-    console.log('Available products:', products);
+    console.log('Base products:', baseProducts);
     
-    if (products.length === 0) {
+    if (baseProducts.length === 0) {
       return NextResponse.json(
         { success: false, error: 'No valid products found in pricing matrix' },
         { status: 400 }
       );
     }
     
+    // Create dynamic product list including interest-only versions
+    const allProducts: Array<{name: string, isInterestOnly: boolean, baseProduct: string}> = [];
+    
+    for (const baseProduct of baseProducts) {
+      // Add the base product (amortizing)
+      allProducts.push({
+        name: baseProduct,
+        isInterestOnly: false,
+        baseProduct: baseProduct
+      });
+      
+      // Add interest-only version for eligible terms (30 and 40 years)
+      if (baseProduct.includes('30') || baseProduct.includes('40')) {
+        allProducts.push({
+          name: `${baseProduct}_Interest_Only`,
+          isInterestOnly: true,
+          baseProduct: baseProduct
+        });
+      }
+    }
+    
+    console.log('All products (including interest-only):', allProducts.map(p => p.name));
+    
     const results: PricingResult[] = [];
     
-    for (const product of products) {
-      console.log(`Calculating pricing for product: ${product}`);
-      const result = calculateVisioPricing(matrix, input, product, pricingData.lender_id);
+    for (const product of allProducts) {
+      console.log(`Calculating pricing for product: ${product.name}`);
+      
+      const result = calculateVisioPricing(matrix, input, product.name, pricingData.lender_id, product.isInterestOnly, product.baseProduct);
       if (result) {
-        console.log(`Valid result for ${product}:`, result);
+        console.log(`Valid result for ${product.name}:`, result);
         results.push(result);
       } else {
-        console.log(`No valid result for ${product}`);
+        console.log(`No valid result for ${product.name}`);
       }
     }
 
@@ -185,7 +219,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: string, lenderId: string): PricingResult | null {
+function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: string, lenderId: string, interestOnly: boolean, baseProduct: string): PricingResult | null {
   try {
     console.log(`Calculating Visio pricing for product ${product} with input:`, input);
     
@@ -219,12 +253,12 @@ function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: 
     }
     console.log(`Base rate: ${baseRate}`);
     
-    // Apply product adjustment
-    const productAdjustment = matrix.rate_structure.products[product] || 0;
-    console.log(`Product adjustment for ${product}: ${productAdjustment}`);
+    // Apply product adjustment (use baseProduct for the adjustment)
+    const productAdjustment = matrix.rate_structure.products[baseProduct] || 0;
+    console.log(`Product adjustment for ${baseProduct}: ${productAdjustment}`);
     
     // Apply interest-only adjustment if applicable
-    const interestOnlyAdjustment = input.interestOnly ? matrix.rate_structure.products['Interest_Only'] : 0;
+    const interestOnlyAdjustment = interestOnly ? matrix.rate_structure.products['Interest_Only'] : 0;
     console.log(`Interest-only adjustment: ${interestOnlyAdjustment}`);
     
     // Apply DSCR adjustments
@@ -252,9 +286,22 @@ function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: 
       console.log(`2-4 units adjustment: ${matrix.rate_structure.program_adjustments["2_4_units"]}`);
     }
     
-    // Calculate final rate
-    let finalRate = baseRate + productAdjustment + interestOnlyAdjustment + dscrAdjustment + programAdjustment;
-    console.log(`Rate calculation: ${baseRate} + ${productAdjustment} + ${interestOnlyAdjustment} + ${dscrAdjustment} + ${programAdjustment} = ${finalRate}`);
+    // Apply origination fee adjustment (AFFECTS RATE)
+    const originationFeeAdjustment = calculateOriginationFeeAdjustment(matrix.rate_structure.origination_fee_adjustments, input.brokerComp);
+    console.log(`Origination fee adjustment: ${originationFeeAdjustment}`);
+    
+    // Apply loan size adjustment (AFFECTS RATE)
+    const loanSizeAdjustment = calculateLoanSizeAdjustment(matrix.rate_structure.loan_size_adjustments, input.loanAmount);
+    console.log(`Loan size adjustment: ${loanSizeAdjustment}`);
+
+      // Calculate points (separate from rate calculation)
+    const yspKey = input.ysp.toString();
+    const yspAdjustment = matrix.broker_payout_add_ons[yspKey] || 0;
+    console.log(`YSP adjustment (points): ${yspAdjustment}`);
+      
+    // Calculate final rate with ALL rate-affecting adjustments
+    let finalRate = baseRate + yspAdjustment + productAdjustment + interestOnlyAdjustment + dscrAdjustment + programAdjustment + originationFeeAdjustment + loanSizeAdjustment;
+    console.log(`Rate calculation: ${baseRate} + ${yspAdjustment} + ${productAdjustment} + ${interestOnlyAdjustment} + ${dscrAdjustment} + ${programAdjustment} + ${originationFeeAdjustment} + ${loanSizeAdjustment} = ${finalRate}`);
     
     // Apply minimum rate constraint
     finalRate = Math.max(finalRate, matrix.rate_structure.minimum_rate);
@@ -265,21 +312,13 @@ function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: 
       console.error('Invalid final rate calculated');
       return null;
     }
-    
-    // Calculate points based on broker compensation
-    const brokerCompKey = input.brokerComp.toString();
-    const brokerCompAdjustment = matrix.broker_payout_add_ons[brokerCompKey] || 0;
-    
-    // Calculate origination fee adjustment
-    const originationFeeAdjustment = calculateOriginationFeeAdjustment(matrix.rate_structure.origination_fee_adjustments, input.brokerComp);
-    
-    // Calculate loan size adjustment
-    const loanSizeAdjustment = calculateLoanSizeAdjustment(matrix.rate_structure.loan_size_adjustments, input.loanAmount);
-    
-    // Calculate prepay penalty adjustment
+  
+    // Calculate prepay penalty adjustment (points only)
     const prepayAdjustment = matrix.rate_structure.prepay_penalty_structures[input.prepayStructure] || 0;
+    console.log(`Prepay penalty adjustment (points): ${prepayAdjustment}`);
     
-    const totalPoints = brokerCompAdjustment + originationFeeAdjustment + loanSizeAdjustment + prepayAdjustment;
+    const totalPoints = yspAdjustment + prepayAdjustment;
+    console.log(`Total points: ${totalPoints}`);
     
     // Calculate monthly payment
     const monthlyRate = finalRate / 100 / 12;
@@ -291,7 +330,7 @@ function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: 
     
     let monthlyPayment;
     
-    if (input.interestOnly) {
+    if (interestOnly) {
       monthlyPayment = (input.loanAmount * monthlyRate);
     } else {
       monthlyPayment = (input.loanAmount * monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / 
@@ -308,8 +347,9 @@ function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: 
     const totalFees = (totalPoints / 100) * input.loanAmount + matrix.loan_terms.underwriting_fee;
 
     return {
-      lenderId: lenderId, // Use actual lender ID from database
-      product,
+      lenderId: lenderId,
+      lenderName: matrix.lender,
+      product: interestOnly ? `${baseProduct} - Interest Only` : baseProduct,
       baseRate,
       finalRate,
       points: totalPoints,
@@ -318,12 +358,23 @@ function calculateVisioPricing(matrix: VisioPricingMatrix, input: any, product: 
       termYears,
       breakdown: {
         baseRate,
-        ficoAdjustment: 0, // Already included in base rate
-        ltvAdjustment: 0, // Already included in base rate
+        ficoAdjustment: 0,
+        ltvAdjustment: 0,
         productAdjustment,
         dscrAdjustment,
-        brokerCompAdjustment,
-        yspAdjustment: 0, // Not applicable in Visio structure
+        originationFeeAdjustment,
+        loanSizeAdjustment,
+        programAdjustment,
+        interestOnlyAdjustment,
+        yspAdjustment,
+      },
+      feeBreakdown: {
+        originationFee: input.brokerComp * input.loanAmount / 100,
+        underwritingFee: matrix.loan_terms.underwriting_fee,
+        yspFee: yspAdjustment * input.loanAmount / 100,
+        prepayFee: prepayAdjustment * input.loanAmount / 100,
+        loanSizeAdjustmentFee: loanSizeAdjustment * input.loanAmount / 100,
+        // Add other fees as needed
       }
     };
   } catch (error) {
