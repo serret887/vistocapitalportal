@@ -19,9 +19,12 @@ import {
   Home as HomeIcon
 } from "lucide-react";
 import { US_STATES } from "@/types";
-import { generateLoanOptions, LoanOption } from "@/lib/loan-pricing";
+import { generateLoanOptions, LoanOption, convertFormDataToPricingRequest, getLoanPricing } from "@/lib/loan-pricing";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PricingResponse, LoanValidationResult } from "../../../lib/types/pricing";
+import { ValidationErrorCard } from "@/components/dashboard/validation-error-card";
+import { ValidationSummary } from "@/components/dashboard/validation-summary";
 
 interface DSCRResults {
   noi: number;
@@ -51,6 +54,8 @@ export default function DSCRCalculator() {
     annualPropertyInsurance: 1200,
     annualPropertyTaxes: 2400,
     monthlyHoaFee: 0,
+    discountPoints: 0,
+    brokerYsp: 0,
   });
 
   const [results, setResults] = useState<DSCRResults | null>(null);
@@ -58,6 +63,8 @@ export default function DSCRCalculator() {
   const [selectedLoan, setSelectedLoan] = useState<LoanOption | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [needsRecalculation, setNeedsRecalculation] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<LoanValidationResult[]>([]);
+  const [matrixRequirements, setMatrixRequirements] = useState<any>(null);
 
   // Utility function to handle number input formatting
   const handleNumberInput = (value: string, setter: (value: number) => void) => {
@@ -76,6 +83,8 @@ export default function DSCRCalculator() {
     if (!isNaN(numValue)) {
       setter(numValue);
       setNeedsRecalculation(true);
+      setValidationErrors([]); // Clear validation errors when user makes changes
+      setMatrixRequirements(null); // Clear matrix requirements when user makes changes
     }
   };
 
@@ -194,6 +203,9 @@ export default function DSCRCalculator() {
 
   const handleCalculate = async () => {
     setIsLoading(true);
+    setValidationErrors([]); // Clear previous errors
+    setMatrixRequirements(null); // Clear previous matrix requirements
+    
     try {
       // Clear any previously selected loan
       setSelectedLoan(null);
@@ -201,8 +213,43 @@ export default function DSCRCalculator() {
       // Calculate initial DSCR with default rate
       calculateDSCR();
       
-      // Generate loan options
-      const options = await generateLoanOptions(formData);
+      // Convert form data to API request
+      const request = convertFormDataToPricingRequest(formData);
+      
+      // Debug: Log the request being sent
+      console.log('Sending pricing request:', {
+        formData,
+        convertedRequest: request
+      });
+      
+      // Get loan pricing from API
+      const pricingResponse = await getLoanPricing(request);
+      
+      // Debug: Log the response
+      console.log('Received pricing response:', pricingResponse);
+      
+      // Check for validation errors
+      if (!pricingResponse.success) {
+        if (pricingResponse.validation) {
+          setValidationErrors([pricingResponse.validation]);
+          console.log('Validation errors set:', pricingResponse.validation);
+          
+          // Store matrix requirements for display
+          setMatrixRequirements({
+            min_value: 125000, // From the matrix
+            max_ltv: 80,
+            dscr_min: 1.00,
+            refinance_min_fico: 720,
+            not_available_in_states: ["AK", "MN", "NE", "NV", "ND", "OR", "SD", "UT", "VT"],
+            property_types: ["1-4 Unit SFR", "Townhomes", "Condos"]
+          });
+        }
+        console.error('Loan pricing failed:', pricingResponse.error);
+        return;
+      }
+      
+      // Generate loan options from the response
+      const options = generateLoanOptions(pricingResponse);
       setLoanOptions(options);
       
       // Reset recalculation flag
@@ -218,6 +265,12 @@ export default function DSCRCalculator() {
       });
     } catch (error) {
       console.error('Error calculating:', error);
+      // Set a generic error if the API call fails
+      setValidationErrors([{
+        isValid: false,
+        errors: ['Unable to calculate loan options. Please check your input and try again.'],
+        warnings: []
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -296,11 +349,15 @@ export default function DSCRCalculator() {
       annualPropertyInsurance: 1200,
       annualPropertyTaxes: 2400,
       monthlyHoaFee: 0,
+      discountPoints: 0,
+      brokerYsp: 0,
     });
     setResults(null);
     setLoanOptions([]);
     setSelectedLoan(null);
     setNeedsRecalculation(false);
+    setValidationErrors([]); // Clear validation errors
+    setMatrixRequirements(null); // Clear matrix requirements
   };
 
   // Dynamic product name formatting
@@ -358,6 +415,8 @@ export default function DSCRCalculator() {
                   <Select value={formData.transactionType} onValueChange={(value) => {
                     setFormData({...formData, transactionType: value});
                     setNeedsRecalculation(true);
+                    setValidationErrors([]); // Clear validation errors
+                    setMatrixRequirements(null); // Clear matrix requirements
                   }}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
@@ -543,7 +602,6 @@ export default function DSCRCalculator() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Single Family">Single Family</SelectItem>
-                      <SelectItem value="Multi Family">Multi Family</SelectItem>
                       <SelectItem value="Condo">Condo</SelectItem>
                       <SelectItem value="Townhouse">Townhouse</SelectItem>
                     </SelectContent>
@@ -605,7 +663,7 @@ export default function DSCRCalculator() {
                 <h3 className="text-sm font-semibold text-gray-800">Broker Compensation</h3>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="brokerPoints" className="text-xs font-medium">Broker Points</Label>
@@ -627,6 +685,53 @@ export default function DSCRCalculator() {
                     placeholder="995"
                     className="h-8 text-xs"
                   />
+                </div>
+              </div>
+
+              {/* Discount Points and Broker YSP in 2 columns */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="discountPoints" className="text-xs font-medium">Discount Points</Label>
+                  <Select value={formData.discountPoints.toString()} onValueChange={(value) => {
+                    setFormData({...formData, discountPoints: Number(value)});
+                    setNeedsRecalculation(true);
+                  }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0</SelectItem>
+                      <SelectItem value="0.5">0.5</SelectItem>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="1.5">1.5</SelectItem>
+                      <SelectItem value="2">2</SelectItem>
+                      <SelectItem value="2.5">2.5</SelectItem>
+                      <SelectItem value="3">3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="brokerYsp" className="text-xs font-medium">Broker YSP</Label>
+                  <Select value={formData.brokerYsp.toString()} onValueChange={(value) => {
+                    setFormData({...formData, brokerYsp: Number(value)});
+                    setNeedsRecalculation(true);
+                  }}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0</SelectItem>
+                      <SelectItem value="0.25">0.25</SelectItem>
+                      <SelectItem value="0.5">0.5</SelectItem>
+                      <SelectItem value="0.75">0.75</SelectItem>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="1.25">1.25</SelectItem>
+                      <SelectItem value="1.5">1.5</SelectItem>
+                      <SelectItem value="1.75">1.75</SelectItem>
+                      <SelectItem value="2">2</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -658,7 +763,31 @@ export default function DSCRCalculator() {
               </div>
             </CardHeader>
             <CardContent>
-              {loanOptions.length > 0 ? (
+              {/* Show validation errors if any */}
+              {validationErrors.length > 0 && validationErrors.some(v => !v.isValid) ? (
+                <div className="space-y-4">
+                  {validationErrors.map((validation, index) => (
+                    <ValidationErrorCard key={index} validation={validation} />
+                  ))}
+                  
+                  {/* Show validation summary if we have matrix requirements */}
+                  {matrixRequirements && (
+                    <ValidationSummary 
+                      validation={validationErrors[0]} 
+                      userInput={{
+                        estimatedHomeValue: formData.estimatedHomeValue,
+                        ltv: (formData.loanAmount / formData.estimatedHomeValue) * 100,
+                        dscr: 1.25, // Default DSCR
+                        fico: formData.ficoScore === '780+' ? 780 : parseInt(formData.ficoScore.split('-')[0]),
+                        propertyState: formData.propertyState,
+                        propertyType: formData.propertyType,
+                        loanPurpose: formData.transactionType === 'purchase' ? 'purchase' : 'refinance'
+                      }}
+                      matrixRequirements={matrixRequirements}
+                    />
+                  )}
+                </div>
+              ) : loanOptions.length > 0 ? (
                 <div className="space-y-3">
                   {loanOptions.map((option, index) => (
                     <div 
