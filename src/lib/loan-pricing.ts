@@ -21,6 +21,7 @@ export interface LoanOption {
     programAdjustment: number;
     interestOnlyAdjustment: number;
     yspAdjustment: number;
+    unitsAdjustment: number;
   };
   feeBreakdown: {
     originationFee: number;
@@ -43,13 +44,14 @@ export interface FormData {
   annualPropertyInsurance: number;
   annualPropertyTaxes: number;
   monthlyHoaFee: number;
-  isShortTermRental: boolean;
   remainingMortgage?: number;
   acquisitionDate?: string;
   brokerPoints: number;
   brokerYsp: number;
   discountPoints: number;
   brokerAdminFee: number;
+  isShortTermRental: boolean;
+  units: number;
 }
 
 // Calculate DSCR from form data - this will be done iteratively in the pricing calculation
@@ -170,6 +172,7 @@ export function convertFormDataToPricingRequest(formData: FormData): LoanPricing
       annualPropertyTaxes: formData.annualPropertyTaxes,
       monthlyHoaFee: formData.monthlyHoaFee,
       isShortTermRental: formData.isShortTermRental,
+      units: formData.units || 1, // Add units field with default value
       remainingMortgage: formData.remainingMortgage,
       acquisitionDate: formData.acquisitionDate,
     }

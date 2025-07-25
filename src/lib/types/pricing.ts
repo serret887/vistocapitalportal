@@ -91,6 +91,7 @@ export interface VisioPricingMatrix {
       short_term_rental: number;
       condo: number;
       "2_4_units": number;
+      units_adjustment: number;
       dscr_adjustments: {
         dscr_gt_1_20: number;
         dscr_lt_1_00_to_0_75_ltv_le_65: number;
@@ -143,6 +144,7 @@ export interface PricingCalculationResult {
     loanSizeAdjustment: number;
     yspAdjustment: number;
     prepayAdjustment: number;
+    unitsAdjustment: number;
   };
 }
 
@@ -171,6 +173,7 @@ export interface LoanPricingRequest {
     annualPropertyTaxes: number;
     monthlyHoaFee: number;
     isShortTermRental: boolean;
+    units: number;
     remainingMortgage?: number;
     acquisitionDate?: string;
   };
@@ -197,6 +200,7 @@ export interface PricingResult {
     programAdjustment: number;
     interestOnlyAdjustment: number;
     yspAdjustment: number;
+    unitsAdjustment: number;
   };
   feeBreakdown: {
     originationFee: number;
@@ -239,5 +243,6 @@ export interface Breakdown {
     programAdjustment: number;
     interestOnlyAdjustment: number;
     yspAdjustment: number;
+    unitsAdjustment: number;
 }
  

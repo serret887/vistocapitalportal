@@ -260,11 +260,12 @@ export function calculatePricing(
   const loanSizeAdjustment = calculateLoanSizeAdjustment(matrix, input.loanAmount);
   const yspAdjustment = calculateYSPAdjustment(matrix, input.brokerComp);
   const prepayAdjustment = calculatePrepayAdjustment(matrix, input.prepayStructure);
-  
+  const unitsAdjustment = input.units && input.units > 1 ? (matrix.rate_structure.program_adjustments.units_adjustment || 0.25) : 0;
+
   // Step 2: Calculate initial rate without DSCR adjustment
   let tempRate = baseRate + productAdjustment + interestOnlyAdjustment + 
                  programAdjustment + originationFeeAdjustment + loanSizeAdjustment + 
-                 yspAdjustment + prepayAdjustment;
+                 yspAdjustment + prepayAdjustment + unitsAdjustment;
   
   // Apply minimum rate constraint
   tempRate = Math.max(tempRate, matrix.rate_structure.minimum_rate);
@@ -289,7 +290,7 @@ export function calculatePricing(
   // Step 6: Calculate final rate including DSCR adjustment
   let finalRate = baseRate + productAdjustment + interestOnlyAdjustment + dscrAdjustment + 
                   programAdjustment + originationFeeAdjustment + loanSizeAdjustment + 
-                  yspAdjustment + prepayAdjustment;
+                  yspAdjustment + prepayAdjustment + unitsAdjustment;
   
   // Apply minimum rate constraint
   finalRate = Math.max(finalRate, matrix.rate_structure.minimum_rate);
@@ -306,7 +307,7 @@ export function calculatePricing(
   // Calculate total rate adjustments (points added to base rate)
   const totalRateAdjustments = productAdjustment + interestOnlyAdjustment + dscrAdjustment + 
                                programAdjustment + originationFeeAdjustment + loanSizeAdjustment + 
-                               yspAdjustment + prepayAdjustment;
+                               yspAdjustment + prepayAdjustment + unitsAdjustment;
   
   // Calculate final monthly payment using final rate
   const termMatch = matrix.loan_terms.term.match(/(\d+)/);
@@ -370,7 +371,8 @@ export function calculatePricing(
       originationFeeAdjustment,
       loanSizeAdjustment,
       yspAdjustment,
-      prepayAdjustment
+      prepayAdjustment,
+      unitsAdjustment
     }
   };
 } 

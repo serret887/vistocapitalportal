@@ -95,7 +95,8 @@ export default function DSCRCalculator() {
     discountPoints: 0,
     brokerYsp: 1,
     remainingMortgage: 0,
-    acquisitionDate: ""
+    acquisitionDate: "",
+    units: 1
   });
 
   const [loanOptions, setLoanOptions] = useState<LoanOption[]>([]);
@@ -260,7 +261,8 @@ export default function DSCRCalculator() {
       discountPoints: 0,
       brokerYsp: 1,
       remainingMortgage: 0,
-      acquisitionDate: ""
+      acquisitionDate: "",
+      units: 1
     });
     setLoanOptions([]);
     setSelectedLoan(null);

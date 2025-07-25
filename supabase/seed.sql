@@ -218,6 +218,7 @@ VALUES (
         "short_term_rental": 0.250,
         "condo": 0.200,
         "2_4_units": 0.250,
+        "units_adjustment": 0.25,
         "dscr_adjustments": {
           "dscr_gt_1_20": -0.125,
           "dscr_lt_1_00_to_0_75_ltv_le_65": 0.500,
