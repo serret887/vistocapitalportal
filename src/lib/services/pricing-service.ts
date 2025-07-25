@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/auth';
-import { LoanPricingRequest, PricingResponse, PricingResult, LoanOption, FeeBreakdown, Breakdown } from '@/lib/types/pricing';
+import { LoanPricingRequest, PricingResponse, PricingResult, LoanOption, FeeBreakdown, Breakdown, VisioPricingMatrix } from '@/lib/types/pricing';
 import { validateLoanEligibility } from '../validation/loan-validation';
 import { calculatePricing } from '../calculations/pricing-calculations';
 
@@ -28,12 +28,39 @@ export class PricingService {
         return { eligibilityMatrix, pricingMatrix: pricing_matrices[0] };
     }
 
+    private static constructVisioPricingMatrix(eligibilityMatrix: any, pricingMatrix: any): VisioPricingMatrix {
+        // Construct the VisioPricingMatrix object from database data
+        return {
+            lender: eligibilityMatrix.lenders.name,
+            date: eligibilityMatrix.effective_date,
+            meta: eligibilityMatrix.rules.meta,
+            loan_terms: eligibilityMatrix.rules.loan_terms,
+            borrower_requirements: eligibilityMatrix.rules.borrower_requirements,
+            property_requirements: eligibilityMatrix.rules.property_requirements,
+            business_rules: eligibilityMatrix.rules.business_rules,
+            rate_structure: pricingMatrix.pricing_data.rate_structure,
+            base_rates: pricingMatrix.pricing_data.base_rates,
+            broker_payout_add_ons: pricingMatrix.pricing_data.broker_payout_add_ons
+        };
+    }
+
     public static async calculateLoanPricing(request: LoanPricingRequest): Promise<PricingResponse> {
         try {
             const { loanProgram, input } = request;
 
             const { eligibilityMatrix, pricingMatrix } = await this.getEligibilityAndPricingMatrices(loanProgram);
-            const validation = validateLoanEligibility(eligibilityMatrix.rules, input);
+            
+            // Construct the proper VisioPricingMatrix object
+            const matrix = this.constructVisioPricingMatrix(eligibilityMatrix, pricingMatrix);
+            
+            console.log('Constructed matrix:', {
+                lender: matrix.lender,
+                hasBusinessRules: !!matrix.business_rules,
+                ruleCategories: Object.keys(matrix.business_rules || {}),
+                hasBaseRates: !!matrix.base_rates
+            });
+
+            const validation = validateLoanEligibility(matrix, input);
 
             if (!validation.isValid) {
                 return { success: false, error: 'Loan not eligible', validation };
