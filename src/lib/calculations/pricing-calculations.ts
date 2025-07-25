@@ -58,22 +58,35 @@ export function calculateInterestOnlyAdjustment(matrix: VisioPricingMatrix, isIn
 export function calculateDSCRAdjustment(matrix: VisioPricingMatrix, dscr: number, ltv: number): number {
   const dscrAdjustments = matrix.rate_structure.program_adjustments.dscr_adjustments;
   
+  console.log('DSCR Adjustment Debug:', {
+    dscr,
+    ltv,
+    dscrAdjustments
+  });
+  
   if (dscr > 1.20) {
+    console.log('DSCR > 1.20: Applying bonus adjustment');
     return dscrAdjustments.dscr_gt_1_20;
-  } else if (dscr < 1.00 && ltv <= 65) {
+  } else if (dscr >= 0.75 && dscr < 1.00 && ltv <= 65) {
+    console.log('DSCR 0.75-1.0 with LTV ≤ 65: Applying penalty adjustment');
     return dscrAdjustments.dscr_lt_1_00_to_0_75_ltv_le_65;
-  } else if (dscr < 1.00) {
-    // This would need special handling for case-by-case
-    return 0;
+  } else if (dscr >= 0.75 && dscr < 1.00 && ltv > 65) {
+    console.log('DSCR 0.75-1.0 with LTV > 65: Not eligible');
+    return 9999; // Very high penalty to indicate not eligible
+  } else if (dscr < 0.75) {
+    console.log('DSCR < 0.75: Case-by-case, returning 0 for now');
+    return 0; // Case-by-case basis
   }
   
+  console.log('DSCR 1.0-1.20: No adjustment');
   return 0;
 }
 
 export function calculateProgramAdjustment(
   matrix: VisioPricingMatrix,
   loanPurpose: string,
-  propertyType: string
+  propertyType: string,
+  isShortTermRental: boolean
 ): number {
   let adjustment = 0;
   
@@ -86,6 +99,17 @@ export function calculateProgramAdjustment(
   } else if (propertyType === '2-4_units') {
     adjustment += matrix.rate_structure.program_adjustments['2_4_units'];
   }
+  
+  if (isShortTermRental) {
+    adjustment += matrix.rate_structure.program_adjustments.short_term_rental;
+  }
+  
+  console.log('Program Adjustment Debug:', {
+    loanPurpose,
+    propertyType,
+    isShortTermRental,
+    adjustment
+  });
   
   return adjustment;
 }
@@ -119,11 +143,21 @@ export function calculateLoanSizeAdjustment(
 
 export function calculateYSPAdjustment(
   matrix: VisioPricingMatrix,
-  ysp: number
+  brokerPoints: number
 ): number {
-  // YSP should be a direct percentage of the loan amount, not a matrix lookup
-  // The matrix lookup is for rate adjustments, not fee calculations
-  return ysp; // Return the YSP percentage directly
+  // YSP rate adjustment is based on broker payout points selected
+  // This affects the rate, not the fee calculation
+  const brokerPayouts = matrix.broker_payout_add_ons;
+  const pointsKey = brokerPoints.toString();
+  
+  console.log('YSP Rate Adjustment Debug:', {
+    brokerPoints,
+    pointsKey,
+    availablePayouts: Object.keys(brokerPayouts),
+    rateAddOn: brokerPayouts[pointsKey] || 0
+  });
+  
+  return brokerPayouts[pointsKey] || 0;
 }
 
 export function calculatePrepayAdjustment(matrix: VisioPricingMatrix, prepayStructure: string): number {
@@ -175,6 +209,39 @@ export function calculateMonthlyPayment(
   }
 }
 
+// Calculate actual DSCR using the real mortgage payment
+function calculateActualDSCR(
+  monthlyRentalIncome: number,
+  annualPropertyInsurance: number,
+  annualPropertyTaxes: number,
+  monthlyHoaFee: number,
+  monthlyMortgagePayment: number
+): number {
+  const annualRentalIncome = monthlyRentalIncome * 12;
+  const annualOperatingExpenses = annualPropertyInsurance + annualPropertyTaxes + (monthlyHoaFee * 12);
+  const noi = annualRentalIncome - annualOperatingExpenses;
+  const annualDebtService = monthlyMortgagePayment * 12;
+  
+  const dscr = noi / annualDebtService;
+  
+  console.log('Actual DSCR Calculation:', {
+    monthlyRentalIncome,
+    annualRentalIncome,
+    annualOperatingExpenses: {
+      insurance: annualPropertyInsurance,
+      taxes: annualPropertyTaxes,
+      hoa: monthlyHoaFee * 12,
+      total: annualOperatingExpenses
+    },
+    noi,
+    monthlyMortgagePayment,
+    annualDebtService,
+    actualDSCR: dscr
+  });
+  
+  return dscr;
+}
+
 export function calculatePricing(
   matrix: VisioPricingMatrix,
   input: any,
@@ -184,34 +251,83 @@ export function calculatePricing(
   // Calculate base rate
   const baseRate = calculateBaseRate(matrix, input.fico, input.ltv);
   
-  // Calculate all adjustments
+  // ITERATIVE APPROACH TO SOLVE DSCR CIRCULAR DEPENDENCY
+  // Step 1: Calculate initial rate without DSCR adjustment
   const productAdjustment = calculateProductAdjustment(matrix, product);
   const interestOnlyAdjustment = calculateInterestOnlyAdjustment(matrix, isInterestOnly);
-  const dscrAdjustment = calculateDSCRAdjustment(matrix, input.dscr, input.ltv);
-  const programAdjustment = calculateProgramAdjustment(matrix, input.loanPurpose, input.propertyType);
+  const programAdjustment = calculateProgramAdjustment(matrix, input.loanPurpose, input.propertyType, input.isShortTermRental);
   const originationFeeAdjustment = calculateOriginationFeeAdjustment(matrix, input.brokerComp);
   const loanSizeAdjustment = calculateLoanSizeAdjustment(matrix, input.loanAmount);
+  const yspAdjustment = calculateYSPAdjustment(matrix, input.brokerComp);
+  const prepayAdjustment = calculatePrepayAdjustment(matrix, input.prepayStructure);
   
-  // Calculate final rate
+  // Step 2: Calculate initial rate without DSCR adjustment
+  let tempRate = baseRate + productAdjustment + interestOnlyAdjustment + 
+                 programAdjustment + originationFeeAdjustment + loanSizeAdjustment + 
+                 yspAdjustment + prepayAdjustment;
+  
+  // Apply minimum rate constraint
+  tempRate = Math.max(tempRate, matrix.rate_structure.minimum_rate);
+  
+  // Step 3: Calculate monthly payment using temporary rate
+  const termMatchTemp = matrix.loan_terms.term.match(/(\d+)/);
+  const termYearsTemp = termMatchTemp ? parseInt(termMatchTemp[1]) : 30;
+  const tempMonthlyPayment = calculateMonthlyPayment(input.loanAmount, tempRate, termYearsTemp, isInterestOnly);
+  
+  // Step 4: Calculate actual DSCR using real mortgage payment
+  const actualDSCR = calculateActualDSCR(
+    input.monthlyRentalIncome,
+    input.annualPropertyInsurance,
+    input.annualPropertyTaxes,
+    input.monthlyHoaFee,
+    tempMonthlyPayment
+  );
+  
+  // Step 5: Calculate DSCR adjustment using actual DSCR
+  const dscrAdjustment = calculateDSCRAdjustment(matrix, actualDSCR, input.ltv);
+  
+  // Step 6: Calculate final rate including DSCR adjustment
   let finalRate = baseRate + productAdjustment + interestOnlyAdjustment + dscrAdjustment + 
-                  programAdjustment + originationFeeAdjustment + loanSizeAdjustment;
+                  programAdjustment + originationFeeAdjustment + loanSizeAdjustment + 
+                  yspAdjustment + prepayAdjustment;
   
   // Apply minimum rate constraint
   finalRate = Math.max(finalRate, matrix.rate_structure.minimum_rate);
   
+  console.log('Iterative DSCR Calculation:', {
+    initialDSCREstimate: input.dscr,
+    tempRateWithoutDSCR: tempRate,
+    tempMonthlyPayment,
+    actualDSCR,
+    dscrAdjustment,
+    finalRate
+  });
+  
   // Calculate total rate adjustments (points added to base rate)
   const totalRateAdjustments = productAdjustment + interestOnlyAdjustment + dscrAdjustment + 
-                               programAdjustment + originationFeeAdjustment + loanSizeAdjustment;
+                               programAdjustment + originationFeeAdjustment + loanSizeAdjustment + 
+                               yspAdjustment + prepayAdjustment;
   
-  // Calculate YSP and prepay adjustments (these are separate from rate adjustments)
-  const yspAdjustment = calculateYSPAdjustment(matrix, input.ysp);
-  const prepayAdjustment = calculatePrepayAdjustment(matrix, input.prepayStructure);
-  const discountPoints = input.discountPoints || 0;
-  
-  // Calculate monthly payment
+  // Calculate final monthly payment using final rate
   const termMatch = matrix.loan_terms.term.match(/(\d+)/);
   const termYears = termMatch ? parseInt(termMatch[1]) : 30;
   const monthlyPayment = calculateMonthlyPayment(input.loanAmount, finalRate, termYears, isInterestOnly);
+  
+  // Verify final DSCR calculation
+  const finalDSCR = calculateActualDSCR(
+    input.monthlyRentalIncome,
+    input.annualPropertyInsurance,
+    input.annualPropertyTaxes,
+    input.monthlyHoaFee,
+    monthlyPayment
+  );
+  
+  console.log('Final DSCR Verification:', {
+    finalRate,
+    finalMonthlyPayment: monthlyPayment,
+    finalDSCR,
+    dscrDifference: Math.abs(finalDSCR - actualDSCR)
+  });
   
   // Calculate fees
   const smallLoanFee = calculateSmallLoanFee(matrix, input.loanAmount);

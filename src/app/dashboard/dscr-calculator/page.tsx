@@ -89,6 +89,7 @@ export default function DSCRCalculator() {
     annualPropertyInsurance: 1200,
     annualPropertyTaxes: 2400,
     monthlyHoaFee: 0,
+    isShortTermRental: false,
     brokerPoints: 1,
     brokerAdminFee: 995,
     discountPoints: 0,
@@ -106,7 +107,18 @@ export default function DSCRCalculator() {
   const [matrixRequirements, setMatrixRequirements] = useState<any>(null);
 
   const handleNumberInput = (value: string, setter: (value: number) => void) => {
-    const numValue = parseFloat(value.replace(/[^0-9.-]/g, ''));
+    const cleanValue = value.replace(/[^0-9.-]/g, '');
+    
+    // Handle empty field - allow clearing to set value to 0
+    if (cleanValue === '') {
+      setter(0);
+      setNeedsRecalculation(true);
+      setValidationErrors([]);
+      setMatrixRequirements(null);
+      return;
+    }
+    
+    const numValue = parseFloat(cleanValue);
     if (!isNaN(numValue)) {
       setter(numValue);
       setNeedsRecalculation(true);
@@ -116,6 +128,7 @@ export default function DSCRCalculator() {
   };
 
   const formatDisplayValue = (value: number): string => {
+    if (value === 0) return '0';
     return value.toLocaleString();
   };
 
@@ -241,6 +254,7 @@ export default function DSCRCalculator() {
       annualPropertyInsurance: 1200,
       annualPropertyTaxes: 2400,
       monthlyHoaFee: 0,
+      isShortTermRental: false,
       brokerPoints: 1,
       brokerAdminFee: 995,
       discountPoints: 0,

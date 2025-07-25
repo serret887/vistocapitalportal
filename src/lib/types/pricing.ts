@@ -170,6 +170,7 @@ export interface LoanPricingRequest {
     annualPropertyInsurance: number;
     annualPropertyTaxes: number;
     monthlyHoaFee: number;
+    isShortTermRental: boolean;
     remainingMortgage?: number;
     acquisitionDate?: string;
   };

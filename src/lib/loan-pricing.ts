@@ -43,6 +43,7 @@ export interface FormData {
   annualPropertyInsurance: number;
   annualPropertyTaxes: number;
   monthlyHoaFee: number;
+  isShortTermRental: boolean;
   remainingMortgage?: number;
   acquisitionDate?: string;
   brokerPoints: number;
@@ -51,9 +52,59 @@ export interface FormData {
   brokerAdminFee: number;
 }
 
+// Calculate DSCR from form data - this will be done iteratively in the pricing calculation
+// For the initial request, we'll use a conservative estimate
+function calculateInitialDSCREstimate(formData: FormData): number {
+  const monthlyRentalIncome = formData.monthlyRentalIncome;
+  const annualRentalIncome = monthlyRentalIncome * 12;
+  
+  // Calculate annual operating expenses (taxes, insurance, HOA)
+  const annualOperatingExpenses = 
+    formData.annualPropertyInsurance + 
+    formData.annualPropertyTaxes + 
+    (formData.monthlyHoaFee * 12);
+  
+  // Net Operating Income
+  const noi = annualRentalIncome - annualOperatingExpenses;
+  
+  // Use a conservative base rate estimate for initial DSCR calculation
+  // This will be refined iteratively in the pricing calculation
+  const conservativeRate = 0.075; // 7.5% - slightly higher than typical base rates
+  const monthlyRate = conservativeRate / 12;
+  const termYears = 30;
+  const numPayments = termYears * 12;
+  
+  const monthlyPayment = formData.loanAmount * 
+    (monthlyRate * Math.pow(1 + monthlyRate, numPayments)) / 
+    (Math.pow(1 + monthlyRate, numPayments) - 1);
+  
+  const annualDebtService = monthlyPayment * 12;
+  
+  // Calculate initial DSCR estimate
+  const dscr = noi / annualDebtService;
+  
+  console.log('Initial DSCR Estimate:', {
+    monthlyRentalIncome,
+    annualRentalIncome,
+    annualOperatingExpenses: {
+      insurance: formData.annualPropertyInsurance,
+      taxes: formData.annualPropertyTaxes,
+      hoa: formData.monthlyHoaFee * 12,
+      total: annualOperatingExpenses
+    },
+    noi,
+    conservativeRate,
+    estimatedMonthlyPayment: monthlyPayment,
+    annualDebtService,
+    initialDSCREstimate: dscr
+  });
+  
+  return dscr;
+}
+
 export function convertFormDataToPricingRequest(formData: FormData): LoanPricingRequest {
   console.log('[convertFormDataToPricingRequest] Received formData:', JSON.stringify(formData, null, 2));
-
+  
   // Parse FICO score range to get the minimum value
   const ficoRange = formData.ficoScore;
   let fico: number;
@@ -108,7 +159,7 @@ export function convertFormDataToPricingRequest(formData: FormData): LoanPricing
       product: 'DSCR', // Explicitly set the product to DSCR
       interestOnly: false, // Default, will be overridden for multiple options
       prepayStructure: formData.prepaymentPenalty,
-      dscr: 1.25, // Default DSCR, will be calculated from form data
+      dscr: calculateInitialDSCREstimate(formData), // Initial DSCR estimate, will be refined iteratively
       brokerComp: formData.brokerPoints,
       ysp: formData.brokerYsp || 1.0, // Use form data or default to 1.0
       discountPoints: formData.discountPoints || 0, // Use form data or default to 0
@@ -118,11 +169,12 @@ export function convertFormDataToPricingRequest(formData: FormData): LoanPricing
       annualPropertyInsurance: formData.annualPropertyInsurance,
       annualPropertyTaxes: formData.annualPropertyTaxes,
       monthlyHoaFee: formData.monthlyHoaFee,
+      isShortTermRental: formData.isShortTermRental,
       remainingMortgage: formData.remainingMortgage,
       acquisitionDate: formData.acquisitionDate,
     }
   };
-
+  
   // Debug logging
   console.log('Form data conversion:', {
     originalFormData: formData,

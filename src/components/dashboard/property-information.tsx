@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Home } from "lucide-react";
 
 interface PropertyInformationProps {
@@ -14,6 +15,7 @@ interface PropertyInformationProps {
     annualPropertyInsurance: number;
     annualPropertyTaxes: number;
     monthlyHoaFee: number;
+    isShortTermRental: boolean;
   };
   onFormDataChange: (updates: Partial<PropertyInformationProps['formData']>) => void;
   onNumberInput: (value: string, setter: (value: number) => void) => void;
@@ -133,6 +135,25 @@ export function PropertyInformation({
               placeholder="0"
               className="h-8 text-xs"
             />
+          </div>
+
+          <div className="col-span-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="isShortTermRental" className="text-xs font-medium">Short-Term Rental</Label>
+              <Switch
+                id="isShortTermRental"
+                checked={formData.isShortTermRental}
+                onCheckedChange={(checked) => {
+                  onFormDataChange({ isShortTermRental: checked });
+                  setNeedsRecalculation(true);
+                  setValidationErrors([]);
+                  setMatrixRequirements(null);
+                }}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Check if this is a short-term rental property (Airbnb, VRBO, etc.)
+            </p>
           </div>
         </div>
       </CardContent>

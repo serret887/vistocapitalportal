@@ -67,7 +67,7 @@ export class PricingService {
             }
 
             const results: PricingResult[] = LOAN_OPTIONS.map((option: LoanOption) => {
-                const pricingResult = calculatePricing(pricingMatrix.pricing_data, input, option.baseProduct, option.interestOnly);
+                const pricingResult = calculatePricing(matrix, input, option.baseProduct, option.interestOnly);
                 
                 const breakdown: Breakdown = {
                     baseRate: pricingResult.baseRate,
