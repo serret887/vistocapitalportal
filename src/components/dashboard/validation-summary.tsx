@@ -19,9 +19,9 @@ export function ValidationSummary({ validation, userInput, matrixRequirements }:
     return <XCircle className="h-3 w-3 text-red-600" />;
   };
 
-  const formatCurrency = (value: number) => `$${value.toLocaleString()}`;
-  const formatPercentage = (value: number) => `${value.toFixed(1)}%`;
-  const formatNumber = (value: number) => value.toFixed(2);
+  const formatCurrency = (value: number) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatPercentage = (value: number) => `${value.toFixed(2)}%`;
+const formatNumber = (value: number) => value.toFixed(2);
 
   return (
     <Card className="border-gray-200 bg-gray-50">
