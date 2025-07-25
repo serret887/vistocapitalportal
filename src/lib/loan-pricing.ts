@@ -52,6 +52,8 @@ export interface FormData {
 }
 
 export function convertFormDataToPricingRequest(formData: FormData): LoanPricingRequest {
+  console.log('[convertFormDataToPricingRequest] Received formData:', JSON.stringify(formData, null, 2));
+
   // Parse FICO score range to get the minimum value
   const ficoRange = formData.ficoScore;
   let fico: number;
@@ -67,8 +69,22 @@ export function convertFormDataToPricingRequest(formData: FormData): LoanPricing
   const ltv = ((formData.loanAmount / formData.estimatedHomeValue) * 100);
   
   // Determine loan purpose
-  const loanPurpose: 'purchase' | 'refinance' | 'cash_out' = formData.transactionType === 'purchase' ? 'purchase' : 
-                     formData.transactionType === 'refinance' ? 'refinance' : 'cash_out';
+  console.log(`[convertFormDataToPricingRequest] formData.transactionType: "${formData.transactionType}"`);
+  const transactionTypeLower = formData.transactionType.toLowerCase().trim();
+  console.log(`[convertFormDataToPricingRequest] transactionTypeLower: "${transactionTypeLower}"`);
+  
+  let loanPurpose: 'purchase' | 'refinance' | 'cash_out';
+  if (transactionTypeLower === 'purchase') {
+    loanPurpose = 'purchase';
+  } else if (transactionTypeLower === 'refinance') {
+    loanPurpose = 'refinance';
+  } else if (transactionTypeLower === 'cash_out') {
+    loanPurpose = 'cash_out';
+  } else {
+    console.warn(`[convertFormDataToPricingRequest] Unknown transaction type: "${formData.transactionType}", defaulting to purchase`);
+    loanPurpose = 'purchase'; // Default to purchase instead of cash_out
+  }
+  console.log(`[convertFormDataToPricingRequest] Determined loanPurpose: ${loanPurpose}`);
   
   // Map property type
   const propertyTypeMap: Record<string, string> = {
@@ -89,7 +105,7 @@ export function convertFormDataToPricingRequest(formData: FormData): LoanPricing
       propertyType,
       propertyState: formData.propertyState,
       occupancyType: 'investment',
-      product: '', // Will be handled by API for all products
+      product: 'DSCR', // Explicitly set the product to DSCR
       interestOnly: false, // Default, will be overridden for multiple options
       prepayStructure: formData.prepaymentPenalty,
       dscr: 1.25, // Default DSCR, will be calculated from form data

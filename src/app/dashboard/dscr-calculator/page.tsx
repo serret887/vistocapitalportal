@@ -77,7 +77,7 @@ const STATE_MAPPING = [
 
 export default function DSCRCalculator() {
   const [formData, setFormData] = useState({
-    transactionType: "Purchase",
+    transactionType: "purchase",
     ficoScore: "740-759",
     estimatedHomeValue: 200000,
     loanAmount: 160000,
@@ -120,7 +120,7 @@ export default function DSCRCalculator() {
   };
 
   const handlePropertyValueChange = (value: number) => {
-    if (formData.transactionType === "Purchase") {
+    if (formData.transactionType === "purchase") {
       const downPaymentAmount = (value * formData.downPayment) / 100;
       const newLoanAmount = value - downPaymentAmount;
       setFormData(prev => ({
@@ -229,7 +229,7 @@ export default function DSCRCalculator() {
 
   const resetToDefaults = () => {
     setFormData({
-      transactionType: "Purchase",
+      transactionType: "purchase",
       ficoScore: "740-759",
       estimatedHomeValue: 200000,
       loanAmount: 160000,
@@ -268,6 +268,10 @@ export default function DSCRCalculator() {
       calculateDSCR();
     }
   }, [selectedLoan, calculateDSCR]);
+
+  useEffect(() => {
+    console.log('[DSCRCalculator] formData changed:', JSON.stringify(formData, null, 2));
+  }, [formData]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">

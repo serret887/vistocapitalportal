@@ -1,3 +1,43 @@
+// Business Rules Types
+export interface BusinessRule {
+  rule_id: string;
+  condition?: {
+    loan_purpose?: string;
+    loan_amount?: { lt?: number; gt?: number; gte?: number; lte?: number };
+    dscr?: { lt?: number; gt?: number; gte?: number; lte?: number };
+    prepay_structure?: string;
+    product?: string;
+    fico?: { min?: number };
+  };
+  requirements?: {
+    min_fico?: number;
+    max_ltv?: number;
+    zero_prepay_required?: boolean;
+    product?: string;
+    interest_only?: boolean;
+    min_dscr?: number;
+    min_rate?: number;
+  };
+  restrictions?: {
+    prepay_structures?: string[];
+    interest_only?: boolean;
+  };
+  error_message: string;
+}
+
+export interface StateRule extends BusinessRule {
+  states: string[];
+}
+
+export interface BusinessRules {
+  state_rules: StateRule[];
+  loan_purpose_rules: BusinessRule[];
+  prepayment_penalty_rules: BusinessRule[];
+  dscr_ltv_rules: BusinessRule[];
+  product_rules: BusinessRule[];
+  rate_rules: BusinessRule[];
+}
+
 // Pricing Matrix Types
 export interface VisioPricingMatrix {
   lender: string;
@@ -30,6 +70,7 @@ export interface VisioPricingMatrix {
       min_active_tradelines: boolean;
       dil_seasoning_years: number;
       late_payment_limitations: boolean;
+      refinance_min_fico: number;
     };
   };
   property_requirements: {
@@ -39,21 +80,12 @@ export interface VisioPricingMatrix {
     dscr_min: number;
     lease_status: string[];
   };
+  business_rules: BusinessRules;
   rate_structure: {
     products: Record<string, number>;
     origination_fee_adjustments: Record<string, number>;
     loan_size_adjustments: Record<string, number>;
-    prepay_penalty_structures: {
-      [key: string]: number | {
-        zero_prepay_required_in: string[];
-        "3/3/3_restrictions": string;
-      } | string[];
-      notes: {
-        zero_prepay_required_in: string[];
-        "3/3/3_restrictions": string;
-      };
-      not_eligible_in: string[];
-    };
+    prepay_penalty_structures: Record<string, number>;
     program_adjustments: {
       cash_out_refinance: number;
       short_term_rental: number;
@@ -69,10 +101,6 @@ export interface VisioPricingMatrix {
   };
   base_rates: {
     tiers: Record<string, Record<string, number>>;
-    notes: {
-      refinance_min_fico: number;
-      dscr_gt_1_20_not_available_on_io: boolean;
-    };
   };
   broker_payout_add_ons: Record<string, number>;
 }
@@ -82,6 +110,15 @@ export interface LoanValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+}
+
+// Rule Validation Results
+export interface RuleValidationResult {
+  rule_id: string;
+  category: string;
+  passed: boolean;
+  error_message?: string;
+  warning_message?: string;
 }
 
 // Pricing Calculation Types
@@ -202,3 +239,4 @@ export interface Breakdown {
     interestOnlyAdjustment: number;
     yspAdjustment: number;
 }
+ 

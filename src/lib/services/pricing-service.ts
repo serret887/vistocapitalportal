@@ -16,7 +16,7 @@ export class PricingService {
         const { data, error } = await supabase
             .from('eligibility_matrices')
             .select('*, lenders(*), pricing_matrices(*)')
-            .eq('lenders.name', 'Rental360') // Hardcode to Rental360 for now
+            .eq('lenders.name', 'Visio') // Hardcode to Visio for now
             .single();
 
         if (error) {

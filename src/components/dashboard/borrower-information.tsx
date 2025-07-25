@@ -43,7 +43,7 @@ export function BorrowerInformation({
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-blue-600" />
-          <h3 className="text-sm font-semibold text-gray-800">Borrower Information</h3>
+          <h3 className="text-sm font-semibold text-gray-800">Borrower & Loan Details</h3>
         </div>
       </CardHeader>
       <CardContent>
@@ -63,9 +63,9 @@ export function BorrowerInformation({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Purchase">Purchase</SelectItem>
-                <SelectItem value="Refinance">Refinance</SelectItem>
-                <SelectItem value="Cash Out">Cash Out</SelectItem>
+                <SelectItem value="purchase">Purchase</SelectItem>
+                <SelectItem value="refinance">Refinance</SelectItem>
+                <SelectItem value="cash_out">Cash Out</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -115,12 +115,12 @@ export function BorrowerInformation({
               type="text"
               value={formatDisplayValue(formData.loanAmount)}
               onChange={(e) => onNumberInput(e.target.value, (value) => onFormDataChange({ loanAmount: value }))}
-              placeholder={formData.transactionType === "Purchase" ? "160000" : "120000"}
+              placeholder={formData.transactionType === "purchase" ? "160000" : "120000"}
               className="h-8 text-xs"
             />
           </div>
 
-          {formData.transactionType === "Purchase" && (
+          {formData.transactionType === "purchase" && (
             <>
               <div>
                 <Label htmlFor="downPayment" className="text-xs font-medium">Down Payment (%)</Label>
@@ -160,7 +160,7 @@ export function BorrowerInformation({
             </>
           )}
 
-          {formData.transactionType === "Refinance" && (
+          {formData.transactionType === "refinance" && (
             <>
               <div>
                 <Label htmlFor="remainingMortgage" className="text-xs font-medium">Remaining Mortgage</Label>
