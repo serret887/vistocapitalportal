@@ -189,7 +189,7 @@ export default function DSCRCalculator() {
         setValidationErrors([response.validation]);
         setMatrixRequirements(null);
         setLoanOptions([]);
-        setSelectedLoan(null);
+      setSelectedLoan(null);
         setDscrResults(null);
         return;
       }
@@ -223,7 +223,7 @@ export default function DSCRCalculator() {
   };
 
   const handleLoanSelect = (loan: LoanOption) => {
-    setSelectedLoan(loan);
+      setSelectedLoan(loan);
     setNeedsRecalculation(false);
   };
 
@@ -325,17 +325,17 @@ export default function DSCRCalculator() {
               setMatrixRequirements={setMatrixRequirements}
             />
 
-            <Button 
-              onClick={handleCalculate}
-              disabled={isLoading}
+              <Button 
+                onClick={handleCalculate}
+                disabled={isLoading}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3"
-            >
-              {isLoading ? "Calculating..." : "Calculate DSCR"}
-            </Button>
-          </div>
+              >
+                {isLoading ? "Calculating..." : "Calculate DSCR"}
+              </Button>
+        </div>
 
           {/* Column 2: Loan Options */}
-          <div>
+                        <div>
             <LoanOptions
               loanOptions={loanOptions}
               selectedLoan={selectedLoan}
@@ -346,8 +346,8 @@ export default function DSCRCalculator() {
               onLoanSelect={handleLoanSelect}
               formatProductName={formatProductName}
             />
-          </div>
-
+                      </div>
+                      
           {/* Column 3: DSCR Results & Cash to Close */}
           <div className="space-y-4">
             <DSCRResults
@@ -360,7 +360,7 @@ export default function DSCRCalculator() {
               formData={formData}
               selectedLoan={selectedLoan}
             />
-          </div>
+                </div>
         </div>
       </div>
     </div>

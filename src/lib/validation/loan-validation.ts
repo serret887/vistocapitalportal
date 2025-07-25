@@ -48,17 +48,21 @@ export function validateLoanEligibility(
   }
 
   // Property type validation
-  if (input.propertyType === 'Multi Family') {
+  if (input.propertyType === 'Multi Family (5+ units)') {
     errors.push(`❌ Multi Family (5+ units) is not eligible for this loan program.\n🔧 SOLUTION: Choose one of these eligible property types: ${matrix.property_requirements.property_types.join(', ')}`);
   } else {
     const validPropertyTypes = matrix.property_requirements.property_types;
     const propertyTypeMap: Record<string, string> = {
       'Single Family': '1-4 Unit SFR',
       'Condo': 'Condos',
-      'Townhouse': 'Townhomes'
+      'Townhouse': 'Townhomes',
+      '1-4 Unit SFR': '1-4 Unit SFR',  // Direct mapping for matrix values
+      'Condos': 'Condos',              // Direct mapping for matrix values
+      'Townhomes': 'Townhomes'         // Direct mapping for matrix values
     };
-    const mappedPropertyType = propertyTypeMap[input.propertyType] || input.propertyType;
-    if (!validPropertyTypes.includes(mappedPropertyType)) {
+    
+    const mappedPropertyType = propertyTypeMap[input.propertyType];
+    if (!mappedPropertyType || !validPropertyTypes.includes(mappedPropertyType)) {
       errors.push(`❌ Property type "${input.propertyType}" is not eligible for this loan program. \n🔧 SOLUTION: Choose one of these eligible property types: ${validPropertyTypes.join(', ')}`);
     }
   }

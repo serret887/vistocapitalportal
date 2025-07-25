@@ -175,3 +175,30 @@ export interface PricingResponse {
   error?: string;
   validation?: LoanValidationResult;
 }
+
+export interface LoanOption {
+    name: string;
+    term: number;
+    interestOnly: boolean;
+    baseProduct: string;
+}
+
+export interface FeeBreakdown {
+    originationFee: number;
+    underwritingFee: number;
+    smallLoanFee?: number;
+    adminFee: number;
+}
+
+export interface Breakdown {
+    baseRate: number;
+    ficoAdjustment: number;
+    ltvAdjustment: number;
+    productAdjustment: number;
+    dscrAdjustment: number;
+    originationFeeAdjustment: number;
+    loanSizeAdjustment: number;
+    programAdjustment: number;
+    interestOnlyAdjustment: number;
+    yspAdjustment: number;
+}
