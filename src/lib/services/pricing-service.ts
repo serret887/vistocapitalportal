@@ -80,6 +80,7 @@ export class PricingService {
                     programAdjustment: pricingResult.adjustments.programAdjustment,
                     interestOnlyAdjustment: pricingResult.adjustments.interestOnlyAdjustment,
                     yspAdjustment: pricingResult.adjustments.yspAdjustment,
+                    prepayAdjustment: pricingResult.adjustments.prepayAdjustment,
                     unitsAdjustment: pricingResult.adjustments.unitsAdjustment,
                 };
                 

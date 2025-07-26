@@ -21,6 +21,7 @@ export interface LoanOption {
     programAdjustment: number;
     interestOnlyAdjustment: number;
     yspAdjustment: number;
+    prepayAdjustment: number;
     unitsAdjustment: number;
   };
   feeBreakdown: {

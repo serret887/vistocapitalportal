@@ -94,6 +94,7 @@ export interface VisioPricingMatrix {
       units_adjustment: number;
       dscr_adjustments: {
         dscr_gt_1_20: number;
+        dscr_1_00_to_1_20: number;
         dscr_lt_1_00_to_0_75_ltv_le_65: number;
         dscr_lt_1_00: string;
       };
@@ -200,6 +201,7 @@ export interface PricingResult {
     programAdjustment: number;
     interestOnlyAdjustment: number;
     yspAdjustment: number;
+    prepayAdjustment: number;
     unitsAdjustment: number;
   };
   feeBreakdown: {
@@ -243,6 +245,7 @@ export interface Breakdown {
     programAdjustment: number;
     interestOnlyAdjustment: number;
     yspAdjustment: number;
+    prepayAdjustment: number;
     unitsAdjustment: number;
 }
  

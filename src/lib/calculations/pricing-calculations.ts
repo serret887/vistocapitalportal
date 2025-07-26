@@ -67,6 +67,9 @@ export function calculateDSCRAdjustment(matrix: VisioPricingMatrix, dscr: number
   if (dscr > 1.20) {
     console.log('DSCR > 1.20: Applying bonus adjustment');
     return dscrAdjustments.dscr_gt_1_20;
+  } else if (dscr >= 1.00 && dscr <= 1.20) {
+    console.log('DSCR 1.0-1.20: Applying penalty adjustment');
+    return dscrAdjustments.dscr_1_00_to_1_20;
   } else if (dscr >= 0.75 && dscr < 1.00 && ltv <= 65) {
     console.log('DSCR 0.75-1.0 with LTV ≤ 65: Applying penalty adjustment');
     return dscrAdjustments.dscr_lt_1_00_to_0_75_ltv_le_65;
@@ -78,7 +81,7 @@ export function calculateDSCRAdjustment(matrix: VisioPricingMatrix, dscr: number
     return 0; // Case-by-case basis
   }
   
-  console.log('DSCR 1.0-1.20: No adjustment');
+  console.log('DSCR adjustment not found for this range');
   return 0;
 }
 
