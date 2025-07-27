@@ -7,9 +7,12 @@ if (typeof window !== 'undefined' || process.env.NODE_ENV === 'development') {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
-  if (supabaseUrl && supabaseAnonKey && 
-      supabaseUrl !== 'your_supabase_project_url' && 
-      supabaseAnonKey !== 'your_supabase_anon_key') {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Missing Supabase environment variables:', {
+      url: supabaseUrl ? 'SET' : 'MISSING',
+      key: supabaseAnonKey ? 'SET' : 'MISSING'
+    })
+  }  else {
     try {
       supabase = createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
@@ -26,8 +29,9 @@ if (typeof window !== 'undefined' || process.env.NODE_ENV === 'development') {
           }
         }
       })
+      console.log('Supabase client initialized successfully')
     } catch (error) {
-      console.warn('Failed to create Supabase client:', error)
+      console.error('Failed to create Supabase client:', error)
     }
   }
 }

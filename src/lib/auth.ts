@@ -83,6 +83,10 @@ export async function getCurrentUserFromRequest(request: NextRequest) {
 // Sign up a new user
 export async function signUp({ email, password, firstName, lastName }: SignupData) {
   try {
+    if (!supabase) {
+      throw new Error('Supabase client not initialized. Check environment variables.')
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -108,6 +112,10 @@ export async function signUp({ email, password, firstName, lastName }: SignupDat
 // Sign in an existing user
 export async function signIn({ email, password }: LoginData) {
   try {
+    if (!supabase) {
+      throw new Error('Supabase client not initialized. Check environment variables.')
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -127,6 +135,10 @@ export async function signIn({ email, password }: LoginData) {
 // Sign out the current user
 export async function signOut() {
   try {
+    if (!supabase) {
+      throw new Error('Supabase client not initialized. Check environment variables.')
+    }
+
     const { error } = await supabase.auth.signOut()
     if (error) {
       throw error
