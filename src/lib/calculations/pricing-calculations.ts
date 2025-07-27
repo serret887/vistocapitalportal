@@ -295,6 +295,10 @@ export function calculatePricing(
                   programAdjustment + originationFeeAdjustment + loanSizeAdjustment + 
                   yspAdjustment + prepayAdjustment + unitsAdjustment;
   
+  // Apply rate adjustment
+  const rateAdjustment = matrix.rate_structure.program_adjustments.rate_adjustment || 0;
+  finalRate += rateAdjustment;
+  
   // Apply minimum rate constraint
   finalRate = Math.max(finalRate, matrix.rate_structure.minimum_rate);
   
@@ -310,7 +314,7 @@ export function calculatePricing(
   // Calculate total rate adjustments (points added to base rate)
   const totalRateAdjustments = productAdjustment + interestOnlyAdjustment + dscrAdjustment + 
                                programAdjustment + originationFeeAdjustment + loanSizeAdjustment + 
-                               yspAdjustment + prepayAdjustment + unitsAdjustment;
+                               yspAdjustment + prepayAdjustment + unitsAdjustment + rateAdjustment;
   
   // Calculate final monthly payment using final rate
   const termMatch = matrix.loan_terms.term.match(/(\d+)/);
@@ -375,7 +379,8 @@ export function calculatePricing(
       loanSizeAdjustment,
       yspAdjustment,
       prepayAdjustment,
-      unitsAdjustment
+      unitsAdjustment,
+      rateAdjustment
     }
   };
 } 

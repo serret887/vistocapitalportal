@@ -98,6 +98,7 @@ export interface VisioPricingMatrix {
         dscr_lt_1_00_to_0_75_ltv_le_65: number;
         dscr_lt_1_00: string;
       };
+      rate_adjustment: number;
     };
     minimum_rate: number;
   };
@@ -146,6 +147,7 @@ export interface PricingCalculationResult {
     yspAdjustment: number;
     prepayAdjustment: number;
     unitsAdjustment: number;
+    rateAdjustment: number;
   };
 }
 
@@ -203,6 +205,7 @@ export interface PricingResult {
     yspAdjustment: number;
     prepayAdjustment: number;
     unitsAdjustment: number;
+    rateAdjustment: number;
   };
   feeBreakdown: {
     originationFee: number;
@@ -247,5 +250,6 @@ export interface Breakdown {
     yspAdjustment: number;
     prepayAdjustment: number;
     unitsAdjustment: number;
+    rateAdjustment: number;
 }
  

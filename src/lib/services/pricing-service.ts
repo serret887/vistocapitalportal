@@ -82,6 +82,7 @@ export class PricingService {
                     yspAdjustment: pricingResult.adjustments.yspAdjustment,
                     prepayAdjustment: pricingResult.adjustments.prepayAdjustment,
                     unitsAdjustment: pricingResult.adjustments.unitsAdjustment,
+                    rateAdjustment: pricingResult.adjustments.rateAdjustment,
                 };
                 
                 const feeBreakdown: FeeBreakdown = pricingResult.feeBreakdown;

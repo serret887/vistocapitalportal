@@ -23,6 +23,7 @@ export interface LoanOption {
     yspAdjustment: number;
     prepayAdjustment: number;
     unitsAdjustment: number;
+    rateAdjustment: number;
   };
   feeBreakdown: {
     originationFee: number;

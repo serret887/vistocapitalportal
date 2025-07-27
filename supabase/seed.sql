@@ -186,7 +186,7 @@ VALUES (
         "5_6_ARM": 0.000,
         "7_6_ARM": 0.100,
         "30_Year_Fixed": 0.200,
-        "Interest_Only": 0.250
+        "Interest_Only": 0.375
       },
       "origination_fee_adjustments": {
         "0%": 0.000,
@@ -221,9 +221,11 @@ VALUES (
         "units_adjustment": 0.25,
         "dscr_adjustments": {
           "dscr_gt_1_20": -0.125,
+          "dscr_1_00_to_1_20": 0.175,
           "dscr_lt_1_00_to_0_75_ltv_le_65": 0.500,
           "dscr_lt_1_00": "case-by-case"
-        }
+        },
+        "rate_adjustment": 0
       },
       "minimum_rate": 6.625
     },
