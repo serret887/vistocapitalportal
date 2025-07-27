@@ -10,14 +10,24 @@ import { getDashboardStats, getLoanApplications, deleteLoanApplication } from '@
 import type { DashboardStats, LoanApplicationStatus, LoanApplication } from '@/types'
 import { Plus, Users, TrendingUp, DollarSign, FileText } from 'lucide-react'
 import { toast } from 'sonner'
+import { useSearchParams } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
 export default function DashboardPage() {
+  const searchParams = useSearchParams()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [applications, setApplications] = useState<LoanApplication[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showApplicationForm, setShowApplicationForm] = useState(false)
+
+  // Check for query parameter to show application form
+  useEffect(() => {
+    const shouldShowForm = searchParams.get('showApplicationForm') === 'true'
+    if (shouldShowForm) {
+      setShowApplicationForm(true)
+    }
+  }, [searchParams])
 
   const loadDashboardData = async () => {
     setIsLoading(true)

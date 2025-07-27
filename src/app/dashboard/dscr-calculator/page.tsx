@@ -10,6 +10,8 @@ import { BrokerCompensation } from "@/components/dashboard/broker-compensation";
 import { LoanOptions } from "@/components/dashboard/loan-options";
 import { DSCRResults } from "@/components/dashboard/dscr-results";
 import { CashToClose } from "@/components/dashboard/cash-to-close";
+import { useRouter } from "next/navigation";
+import { FileText } from "lucide-react";
 
 interface DSCRResults {
   noi: number;
@@ -76,6 +78,7 @@ const STATE_MAPPING = [
 ];
 
 export default function DSCRCalculator() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     transactionType: "purchase",
     ficoScore: "740-759",
@@ -279,6 +282,51 @@ export default function DSCRCalculator() {
     return product;
   };
 
+  const handleCreateApplication = () => {
+    // Store DSCR calculator data in localStorage to pre-populate the application form
+    const dscrData = {
+      // Loan Information
+      loan_objective: formData.transactionType === 'purchase' ? 'purchase' : 'refi',
+      loan_type: 'dscr', // This is a DSCR loan
+      
+      // Property Information
+      property_type: formData.propertyType,
+      property_address: '', // Will be filled in application form
+      property_is_tbd: false,
+      
+      // Financial Information
+      estimated_home_value: formData.estimatedHomeValue,
+      loan_amount: formData.loanAmount,
+      down_payment_percentage: formData.downPayment,
+      monthly_rental_income: formData.monthlyRentalIncome,
+      annual_property_insurance: formData.annualPropertyInsurance,
+      annual_property_taxes: formData.annualPropertyTaxes,
+      monthly_hoa_fee: formData.monthlyHoaFee,
+      is_short_term_rental: formData.isShortTermRental,
+      
+      // Selected Loan Details
+      selected_loan: selectedLoan,
+      dscr_results: dscrResults,
+      
+      // Broker Information
+      broker_points: formData.brokerPoints,
+      broker_admin_fee: formData.brokerAdminFee,
+      broker_ysp: formData.brokerYsp,
+      
+      // Property State
+      property_state: formData.propertyState,
+      
+      // Timestamp
+      timestamp: new Date().toISOString()
+    };
+    
+    // Store the data
+    localStorage.setItem('dscrCalculatorData', JSON.stringify(dscrData));
+    
+    // Navigate to dashboard with a query parameter to trigger the application form
+    router.push('/dashboard?showApplicationForm=true');
+  };
+
   useEffect(() => {
     if (selectedLoan) {
       calculateDSCR();
@@ -380,6 +428,17 @@ export default function DSCRCalculator() {
               formData={formData}
               selectedLoan={selectedLoan}
             />
+
+            {/* Create Application Button - Only show when a loan is selected */}
+            {selectedLoan && (
+              <Button 
+                onClick={handleCreateApplication}
+                className="w-full bg-visto-gold hover:bg-visto-dark-gold text-white font-semibold py-3 flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <FileText className="h-4 w-4" />
+                Create Application
+              </Button>
+            )}
                 </div>
         </div>
       </div>

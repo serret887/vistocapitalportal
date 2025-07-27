@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,37 +28,100 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
   const [currentSection, setCurrentSection] = useState(0)
   const [errors, setErrors] = useState<ValidationErrors>({})
   
-  const [formData, setFormData] = useState<LoanApplicationFormData>({
-    // Personal Info
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone_number: '',
+  // Check for DSCR calculator data and pre-populate form
+  const getInitialFormData = (): LoanApplicationFormData => {
+    try {
+      const dscrData = localStorage.getItem('dscrCalculatorData')
+      if (dscrData) {
+        const parsed = JSON.parse(dscrData)
+        
+        // Pre-populate with DSCR data
+        return {
+          // Personal Info (empty - user will fill)
+          first_name: '',
+          last_name: '',
+          email: '',
+          phone_number: '',
+          
+          // Property Info (pre-populated from DSCR)
+          property_address: '',
+          property_is_tbd: parsed.property_is_tbd || false,
+          property_type: parsed.property_type || '',
+          current_residence: '',
+          
+          // Loan Information (pre-populated from DSCR)
+          loan_objective: parsed.loan_objective || '',
+          loan_type: parsed.loan_type || '',
+          
+          // Personal Details (empty - user will fill)
+          ssn: '',
+          date_of_birth: '',
+          
+          // Income Information (for homeowner loans)
+          total_income: 0,
+          income_sources: [],
+          income_documents: [],
+          
+          // Assets
+          total_assets: 0,
+          bank_accounts: [],
+          bank_statements: []
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing DSCR data:', error)
+    }
     
-    // Property Info
-    property_address: '',
-    property_is_tbd: false,
-    property_type: '',
-    current_residence: '',
-    
-    // Loan Information
-    loan_objective: '' as LoanObjective | '',
-    loan_type: '',
-    
-    // Personal Details
-    ssn: '',
-    date_of_birth: '',
-    
-    // Income Information (for homeowner loans)
-    total_income: 0,
-    income_sources: [],
-    income_documents: [],
-    
-    // Assets
-    total_assets: 0,
-    bank_accounts: [],
-    bank_statements: []
-  })
+    // Default empty form data
+    return {
+      // Personal Info
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone_number: '',
+      
+      // Property Info
+      property_address: '',
+      property_is_tbd: false,
+      property_type: '',
+      current_residence: '',
+      
+      // Loan Information
+      loan_objective: '' as LoanObjective | '',
+      loan_type: '',
+      
+      // Personal Details
+      ssn: '',
+      date_of_birth: '',
+      
+      // Income Information (for homeowner loans)
+      total_income: 0,
+      income_sources: [],
+      income_documents: [],
+      
+      // Assets
+      total_assets: 0,
+      bank_accounts: [],
+      bank_statements: []
+    }
+  }
+  
+  const [formData, setFormData] = useState<LoanApplicationFormData>(getInitialFormData())
+  
+  // Store DSCR data for reference
+  const [dscrData, setDscrData] = useState<any>(null)
+  
+  // Load DSCR data on component mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('dscrCalculatorData')
+      if (stored) {
+        setDscrData(JSON.parse(stored))
+      }
+    } catch (error) {
+      console.error('Error loading DSCR data:', error)
+    }
+  }, [])
 
   // Check if income section is needed
   const isHomeOwnerLoan = formData.loan_type === 'homeowner'
@@ -506,6 +569,8 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
       }
 
       if (application) {
+        // Clear DSCR calculator data from localStorage after successful submission
+        localStorage.removeItem('dscrCalculatorData')
         toast.success('Application created successfully!')
         onSuccess?.()
       }
@@ -634,24 +699,50 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
         </Card>
         
         {!formData.property_is_tbd && (
-          <div className="space-y-3">
-            <Label htmlFor="property_address" className="text-lg font-medium visto-dark-blue">
-              Property Address *
-            </Label>
-            <Input
-              id="property_address"
-              type="text"
-              required={!formData.property_is_tbd}
-              value={formData.property_address}
-              onChange={handleInputChange('property_address')}
-              className={`text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 ${
-                errors.property_address ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
-              }`}
-              placeholder="123 Main St, City, State 12345"
-            />
-            {errors.property_address && (
-              <p className="text-sm text-red-600">{errors.property_address}</p>
-            )}
+          <div className="space-y-6">
+            {/* Property Type */}
+            <div className="space-y-3">
+              <Label htmlFor="property_type" className="text-lg font-medium visto-dark-blue">
+                Property Type *
+              </Label>
+              <Select value={formData.property_type} onValueChange={handleSelectChange('property_type')}>
+                <SelectTrigger className={`text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 ${
+                  errors.property_type ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+                }`}>
+                  <SelectValue placeholder="Select property type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Single Family">Single Family</SelectItem>
+                  <SelectItem value="Condo">Condo</SelectItem>
+                  <SelectItem value="Townhouse">Townhouse</SelectItem>
+                  <SelectItem value="Multi Family">Multi Family</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.property_type && (
+                <p className="text-sm text-red-600">{errors.property_type}</p>
+              )}
+            </div>
+
+            {/* Property Address */}
+            <div className="space-y-3">
+              <Label htmlFor="property_address" className="text-lg font-medium visto-dark-blue">
+                Property Address *
+              </Label>
+              <Input
+                id="property_address"
+                type="text"
+                required={!formData.property_is_tbd}
+                value={formData.property_address}
+                onChange={handleInputChange('property_address')}
+                className={`text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 ${
+                  errors.property_address ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''
+                }`}
+                placeholder="123 Main St, City, State 12345"
+              />
+              {errors.property_address && (
+                <p className="text-sm text-red-600">{errors.property_address}</p>
+              )}
+            </div>
           </div>
         )}
         
@@ -695,6 +786,65 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
 
     return (
       <div className="space-y-8">
+        {/* DSCR Calculator Data Summary */}
+        {dscrData && (
+          <Card className="border-2 border-primary/20 bg-gradient-visto-subtle p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Building className="h-5 w-5 text-visto-gold" />
+                <h3 className="text-lg font-semibold visto-dark-blue">DSCR Calculator Data</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="visto-slate">Property Value:</span>
+                    <span className="font-medium">${dscrData.estimated_home_value?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="visto-slate">Loan Amount:</span>
+                    <span className="font-medium">${dscrData.loan_amount?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="visto-slate">Down Payment:</span>
+                    <span className="font-medium">{dscrData.down_payment_percentage}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="visto-slate">Monthly Rent:</span>
+                    <span className="font-medium">${dscrData.monthly_rental_income?.toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="visto-slate">Property Type:</span>
+                    <span className="font-medium">{dscrData.property_type}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="visto-slate">Property State:</span>
+                    <span className="font-medium">{dscrData.property_state}</span>
+                  </div>
+                  {dscrData.dscr_results && (
+                    <div className="flex justify-between">
+                      <span className="visto-slate">DSCR Ratio:</span>
+                      <span className="font-medium">{dscrData.dscr_results.dscr?.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {dscrData.selected_loan && (
+                    <div className="flex justify-between">
+                      <span className="visto-slate">Selected Product:</span>
+                      <span className="font-medium text-visto-gold">{dscrData.selected_loan.product}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="pt-2 border-t border-primary/20">
+                <p className="text-xs visto-slate">
+                  This information was pre-populated from your DSCR calculator. You can modify the loan details below if needed.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Loan Objective */}
         <div className="space-y-3">
           <Label htmlFor="loan_objective" className="text-lg font-medium visto-dark-blue">
