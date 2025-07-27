@@ -7,6 +7,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+// Define the volume ranges
+const VOLUME_RANGES = [
+  { label: '100K to 500K', value: '100000-500000' },
+  { label: '501K to 1M', value: '501000-1000000' },
+  { label: '1M+', value: '1000000+' }
+]
 
 export function Step3BusinessInfo() {
   const { formData, updateFormData, nextStep, prevStep } = useOnboarding()
@@ -39,8 +47,17 @@ export function Step3BusinessInfo() {
     updateFormData({ monthly_deal_volume: value })
   }
 
-  const handleTransactionVolumeChange = (value: number) => {
-    updateFormData({ transaction_volume: value })
+  const handleTransactionVolumeChange = (value: string) => {
+    // Convert the selected range to a numeric value (use the lower bound)
+    let numericValue = 0
+    if (value === '100000-500000') {
+      numericValue = 300000 // Use middle value of range
+    } else if (value === '501000-1000000') {
+      numericValue = 750000 // Use middle value of range
+    } else if (value === '1000000+') {
+      numericValue = 1500000 // Use 1.5M for 1M+
+    }
+    updateFormData({ transaction_volume: numericValue })
   }
 
   const handleTransactionTypeToggle = (transactionType: TransactionType) => {
@@ -50,6 +67,19 @@ export function Step3BusinessInfo() {
       : [...currentTypes, transactionType]
     
     updateFormData({ transaction_types: updatedTypes })
+  }
+
+  // Get the current volume range based on the stored value
+  const getCurrentVolumeRange = () => {
+    const volume = formData.transaction_volume || 0
+    if (volume >= 100000 && volume <= 500000) {
+      return '100000-500000'
+    } else if (volume >= 501000 && volume <= 1000000) {
+      return '501000-1000000'
+    } else if (volume > 1000000) {
+      return '1000000+'
+    }
+    return ''
   }
 
   const handleContinue = () => {
@@ -105,17 +135,22 @@ export function Step3BusinessInfo() {
             </CardHeader>
             <CardContent className="px-6 pb-6">
               <div className="space-y-4">
-                <Label htmlFor="volume" className="text-lg font-medium visto-dark-blue">Monthly Average Volume ($)</Label>
-                <Input
-                  id="volume"
-                  type="text"
-                  min="0"
-                  step="1000"
-                  placeholder="250,000"
-                  value={formatDisplayValue(formData.transaction_volume || 0)}
-                  onChange={(e) => handleNumberInput(e.target.value, handleTransactionVolumeChange)}
-                  className="text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
-                />
+                <Label htmlFor="volume" className="text-lg font-medium visto-dark-blue">Monthly Average Volume</Label>
+                <Select
+                  value={getCurrentVolumeRange()}
+                  onValueChange={handleTransactionVolumeChange}
+                >
+                  <SelectTrigger className="text-lg py-4 px-5 border-2 focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200">
+                    <SelectValue placeholder="Select volume range" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VOLUME_RANGES.map((range) => (
+                      <SelectItem key={range.value} value={range.value}>
+                        {range.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>

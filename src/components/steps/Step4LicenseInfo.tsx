@@ -13,6 +13,13 @@ interface Step4LicenseInfoProps {
   onSubmit: () => void
 }
 
+// Define the volume ranges (same as in Step3BusinessInfo)
+const VOLUME_RANGES = [
+  { label: '100K to 500K', value: '100000-500000' },
+  { label: '501K to 1M', value: '501000-1000000' },
+  { label: '1M+', value: '1000000+' }
+]
+
 export function Step4LicenseInfo({ onSubmit }: Step4LicenseInfoProps) {
   const { formData, updateFormData, prevStep, submitOnboarding, isLoading } = useOnboarding()
   const router = useRouter()
@@ -23,6 +30,18 @@ export function Step4LicenseInfo({ onSubmit }: Step4LicenseInfoProps) {
 
   const handleLicenseStateChange = (value: string) => {
     updateFormData({ license_state: value })
+  }
+
+  // Function to get volume range display based on numeric value
+  const getVolumeRangeDisplay = (volume: number): string => {
+    if (volume >= 100000 && volume <= 500000) {
+      return '100K to 500K'
+    } else if (volume >= 501000 && volume <= 1000000) {
+      return '501K to 1M'
+    } else if (volume > 1000000) {
+      return '1M+'
+    }
+    return 'Not specified'
   }
 
   const handleSubmit = async () => {
@@ -108,7 +127,7 @@ export function Step4LicenseInfo({ onSubmit }: Step4LicenseInfoProps) {
               </div>
               <div className="flex justify-between">
                 <span className="font-medium visto-dark-blue">Volume:</span>
-                <span className="visto-slate">${formData.transaction_volume.toLocaleString()}</span>
+                <span className="visto-slate">{getVolumeRangeDisplay(formData.transaction_volume || 0)}</span>
               </div>
               <div className="pt-2">
                 <span className="font-medium visto-dark-blue">Specialties:</span>
@@ -182,7 +201,7 @@ export function Step4LicenseInfo({ onSubmit }: Step4LicenseInfoProps) {
             </div>
             <div className="flex justify-between">
               <span className="font-medium visto-dark-blue">Volume:</span>
-              <span className="visto-slate">${formData.transaction_volume.toLocaleString()}</span>
+              <span className="visto-slate">{getVolumeRangeDisplay(formData.transaction_volume || 0)}</span>
             </div>
             <div className="pt-3">
               <span className="font-medium visto-dark-blue">Specialties:</span>
