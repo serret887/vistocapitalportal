@@ -29,6 +29,9 @@ export function PhoneVerification({ phoneNumber, onVerified, onSkip }: PhoneVeri
     try {
       const { error } = await supabase.auth.signInWithOtp({
         phone: phoneNumber,
+        options: {
+          shouldCreateUser: false, // Don't create a new user, just send OTP
+        }
       })
 
       if (error) {
@@ -36,11 +39,11 @@ export function PhoneVerification({ phoneNumber, onVerified, onSkip }: PhoneVeri
       }
 
       setIsOtpSent(true)
-      toast.success('OTP sent to your phone number')
+      toast.success('Verification code sent to your phone number')
     } catch (error) {
       console.error('Error sending OTP:', error)
-      setError(error instanceof Error ? error.message : 'Failed to send OTP')
-      toast.error('Failed to send OTP. Please try again.')
+      setError(error instanceof Error ? error.message : 'Failed to send verification code')
+      toast.error('Failed to send verification code. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -66,8 +69,8 @@ export function PhoneVerification({ phoneNumber, onVerified, onSkip }: PhoneVeri
       onVerified(phoneNumber)
     } catch (error) {
       console.error('Error verifying OTP:', error)
-      setError(error instanceof Error ? error.message : 'Invalid OTP')
-      toast.error('Invalid OTP. Please try again.')
+      setError(error instanceof Error ? error.message : 'Invalid verification code')
+      toast.error('Invalid verification code. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -148,7 +151,12 @@ export function PhoneVerification({ phoneNumber, onVerified, onSkip }: PhoneVeri
         {error && (
           <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-md">
             <AlertCircle className="h-4 w-4" />
-            {error}
+            {error.includes('rate limit') 
+              ? 'Too many attempts. Please wait a few minutes before trying again.'
+              : error.includes('invalid phone') 
+              ? 'Please enter a valid phone number in international format.'
+              : error
+            }
           </div>
         )}
 
