@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
-import { Phone, CheckCircle, AlertCircle } from 'lucide-react'
+import { Phone, CheckCircle, AlertCircle, Info } from 'lucide-react'
 
 interface PhoneVerificationProps {
   phoneNumber: string
@@ -21,10 +21,12 @@ export function PhoneVerification({ phoneNumber, onVerified, onSkip }: PhoneVeri
   const [isOtpSent, setIsOtpSent] = useState(false)
   const [isVerified, setIsVerified] = useState(false)
   const [error, setError] = useState('')
+  const [showOtpDisabled, setShowOtpDisabled] = useState(false)
 
   const sendOtp = async () => {
     setIsLoading(true)
     setError('')
+    setShowOtpDisabled(false)
 
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -35,6 +37,13 @@ export function PhoneVerification({ phoneNumber, onVerified, onSkip }: PhoneVeri
       })
 
       if (error) {
+        // Handle the specific "Signups not allowed for otp" error
+        if (error.message.includes('Signups not allowed for otp')) {
+          setShowOtpDisabled(true)
+          setError('Phone verification is currently disabled. You can proceed without verification.')
+          toast.info('Phone verification is disabled. You can continue without verification.')
+          return
+        }
         throw error
       }
 
@@ -82,6 +91,13 @@ export function PhoneVerification({ phoneNumber, onVerified, onSkip }: PhoneVeri
     }
   }
 
+  const handleProceedWithoutVerification = () => {
+    // Mark as verified even without OTP verification
+    setIsVerified(true)
+    toast.success('Proceeding without phone verification')
+    onVerified(phoneNumber)
+  }
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -95,7 +111,31 @@ export function PhoneVerification({ phoneNumber, onVerified, onSkip }: PhoneVeri
           We'll send a verification code to <strong>{phoneNumber}</strong>
         </div>
 
-        {!isOtpSent ? (
+        {showOtpDisabled ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
+              <Info className="h-4 w-4" />
+              Phone verification is currently disabled in this environment.
+            </div>
+            <div className="space-y-2">
+              <Button 
+                onClick={handleProceedWithoutVerification}
+                className="w-full"
+              >
+                Continue Without Verification
+              </Button>
+              {onSkip && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleSkip}
+                  className="w-full"
+                >
+                  Skip for now
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : !isOtpSent ? (
           <div className="space-y-4">
             <Button 
               onClick={sendOtp} 
@@ -148,7 +188,7 @@ export function PhoneVerification({ phoneNumber, onVerified, onSkip }: PhoneVeri
           </div>
         )}
 
-        {error && (
+        {error && !showOtpDisabled && (
           <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-md">
             <AlertCircle className="h-4 w-4" />
             {error.includes('rate limit') 
