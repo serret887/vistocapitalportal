@@ -9,7 +9,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { signUp } from "@/lib/auth"
+import { signUp, getCurrentUser } from "@/lib/auth"
 import { toast } from "sonner"
 
 export function SignupForm({
@@ -69,6 +69,19 @@ export function SignupForm({
     return true
   }
 
+  const waitForSession = async (maxAttempts = 10): Promise<boolean> => {
+    for (let i = 0; i < maxAttempts; i++) {
+      const { user, error } = await getCurrentUser()
+      if (user && !error) {
+        console.log('Session established successfully')
+        return true
+      }
+      console.log(`Session attempt ${i + 1}/${maxAttempts} - waiting...`)
+      await new Promise(resolve => setTimeout(resolve, 500)) // Wait 500ms between attempts
+    }
+    return false
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -92,9 +105,21 @@ export function SignupForm({
       }
 
       if (user) {
-        toast.success('Account created successfully! Please complete your onboarding.')
-        // Redirect to onboarding
-        router.push('/onboarding')
+        toast.success('Account created successfully! Setting up your session...')
+        
+        // Wait for session to be established
+        const sessionEstablished = await waitForSession()
+        
+        if (sessionEstablished) {
+          toast.success('Session established! Redirecting to onboarding...')
+          // Small delay to ensure everything is ready
+          setTimeout(() => {
+            router.push('/onboarding')
+          }, 1000)
+        } else {
+          toast.error('Session setup failed. Please try logging in manually.')
+          router.push('/login')
+        }
       }
     } catch (error) {
       console.error('Signup error:', error)

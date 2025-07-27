@@ -41,14 +41,19 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     const loadUserAndProfile = async () => {
       setIsLoading(true)
       try {
+        // Add a small delay to ensure session is established after signup
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
         const { user: currentUser, error: userError } = await getCurrentUser()
         
         if (userError || !currentUser) {
+          console.log('No authenticated user found, redirecting to login')
           toast.error('Please sign in to continue')
           router.push('/login')
           return
         }
 
+        console.log('User authenticated successfully:', currentUser.id)
         setUser(currentUser)
 
         // Try to load existing partner profile
@@ -72,6 +77,8 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             license_number: profile.license_number || '',
             license_state: profile.license_state || '',
           })
+        } else {
+          console.log('No existing profile found - starting fresh onboarding')
         }
       } catch (error) {
         console.error('Error loading user and profile:', error)
