@@ -316,6 +316,38 @@ export default function DSCRCalculator() {
       // Property State
       property_state: formData.propertyState,
       
+      // Additional DSCR Fields for API
+      ficoScoreRange: formData.ficoScore,
+      prepaymentPenalty: formData.prepaymentPenalty,
+      discountPoints: formData.discountPoints,
+      transactionType: formData.transactionType,
+      propertyZipCode: '', // Will be filled in application form
+      propertyCity: '', // Will be filled in application form
+      propertyCounty: '', // Will be filled in application form
+      propertyOccupancy: 'Investment', // Default for DSCR loans
+      propertyUse: 'Rental', // Default for DSCR loans
+      propertyCondition: 'Good', // Default assumption
+      propertyYearBuilt: 0, // Will be filled in application form
+      propertySquareFootage: 0, // Will be filled in application form
+      propertyBedrooms: 0, // Will be filled in application form
+      propertyBathrooms: 0, // Will be filled in application form
+      propertyLotSize: 0, // Will be filled in application form
+      propertyZoning: 'Residential', // Default assumption
+      propertyAppraisalValue: formData.estimatedHomeValue,
+      propertyPurchasePrice: formData.estimatedHomeValue,
+      propertySellerConcessions: 0, // Will be filled in application form
+      propertyClosingCosts: 0, // Will be filled in application form
+      propertyRepairsImprovements: 0, // Will be filled in application form
+      propertyReserves: 0, // Will be filled in application form
+      propertyEscrowAccounts: false, // Default assumption
+      propertyFloodInsurance: 0, // Will be filled in application form
+      propertyHazardInsurance: formData.annualPropertyInsurance,
+      propertyTitleInsurance: 0, // Will be filled in application form
+      propertySurveyFees: 0, // Will be filled in application form
+      propertyRecordingFees: 0, // Will be filled in application form
+      propertyTransferTaxes: 0, // Will be filled in application form
+      propertyOtherCosts: 0, // Will be filled in application form
+      
       // Timestamp
       timestamp: new Date().toISOString()
     };

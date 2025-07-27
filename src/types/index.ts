@@ -191,6 +191,55 @@ export interface LoanApplication {
   bank_accounts: BankAccount[]
   bank_statements: BankStatement[]
   
+  // DSCR Calculator Data
+  dscr_data?: any
+  estimated_home_value?: number
+  loan_amount?: number
+  down_payment_percentage?: number
+  monthly_rental_income?: number
+  annual_property_insurance?: number
+  annual_property_taxes?: number
+  monthly_hoa_fee?: number
+  is_short_term_rental?: boolean
+  property_state?: string
+  broker_points?: number
+  broker_admin_fee?: number
+  broker_ysp?: number
+  selected_loan_product?: any
+  dscr_results?: any
+  
+  // Additional DSCR Fields
+  fico_score_range?: string
+  prepayment_penalty?: string
+  discount_points?: number
+  transaction_type?: string
+  property_zip_code?: string
+  property_city?: string
+  property_county?: string
+  property_occupancy?: string
+  property_use?: string
+  property_condition?: string
+  property_year_built?: number
+  property_square_footage?: number
+  property_bedrooms?: number
+  property_bathrooms?: number
+  property_lot_size?: number
+  property_zoning?: string
+  property_appraisal_value?: number
+  property_purchase_price?: number
+  property_seller_concessions?: number
+  property_closing_costs?: number
+  property_repairs_improvements?: number
+  property_reserves?: number
+  property_escrow_accounts?: boolean
+  property_flood_insurance?: number
+  property_hazard_insurance?: number
+  property_title_insurance?: number
+  property_survey_fees?: number
+  property_recording_fees?: number
+  property_transfer_taxes?: number
+  property_other_costs?: number
+  
   // Application status
   status: LoanApplicationStatus
   

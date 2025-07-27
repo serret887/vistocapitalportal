@@ -10,12 +10,13 @@ import { getDashboardStats, getLoanApplications, deleteLoanApplication } from '@
 import type { DashboardStats, LoanApplicationStatus, LoanApplication } from '@/types'
 import { Plus, Users, TrendingUp, DollarSign, FileText } from 'lucide-react'
 import { toast } from 'sonner'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [applications, setApplications] = useState<LoanApplication[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -84,15 +85,13 @@ export default function DashboardPage() {
   }
 
   const handleViewApplication = (application: LoanApplication) => {
-    // Future: Open application details modal/page
-    console.log('Viewing application:', application)
-    toast.info('Application details view - Coming soon!')
+    // Navigate to the view application page
+    router.push(`/dashboard/applications/${application.id}`)
   }
 
   const handleEditApplication = (application: LoanApplication) => {
-    // Future: Open edit application form
-    console.log('Editing application:', application)
-    toast.info('Edit application - Coming soon!')
+    // Navigate to the edit application page
+    router.push(`/dashboard/applications/${application.id}/edit`)
   }
 
   const handleDeleteApplication = async (application: LoanApplication) => {

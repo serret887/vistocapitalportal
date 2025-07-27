@@ -1,3 +1,13 @@
+-- =====================================================
+-- VISTO CAPITAL PARTNER PORTAL - UNIFIED SCHEMA
+-- =====================================================
+-- This migration creates the complete database schema for the Visto Capital Partner Portal
+-- Includes: Pricing matrices, partner profiles, loan applications, and DSCR calculator data
+
+-- =====================================================
+-- PRICING & ELIGIBILITY MATRICES
+-- =====================================================
+
 -- Drop existing tables if they exist
 DROP TABLE IF EXISTS pricing_matrices CASCADE;
 DROP TABLE IF EXISTS eligibility_matrices CASCADE;
@@ -48,12 +58,12 @@ COMMENT ON COLUMN pricing_matrices.eligibility_matrix_id IS 'Foreign key referen
 COMMENT ON COLUMN pricing_matrices.effective_date IS 'The date from which this pricing matrix is effective.';
 COMMENT ON COLUMN pricing_matrices.pricing_data IS 'A JSONB object containing base rates, adjustments, and other pricing data.';
 
--- Enable RLS
+-- Enable RLS for pricing tables
 ALTER TABLE lenders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE eligibility_matrices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pricing_matrices ENABLE ROW LEVEL SECURITY;
 
--- Create RLS policies
+-- Create RLS policies for pricing tables
 CREATE POLICY "Allow authenticated users to read lenders" ON lenders
     FOR SELECT USING (auth.role() = 'authenticated');
 
@@ -63,7 +73,7 @@ CREATE POLICY "Allow authenticated users to read eligibility matrices" ON eligib
 CREATE POLICY "Allow authenticated users to read pricing matrices" ON pricing_matrices
     FOR SELECT USING (auth.role() = 'authenticated');
 
--- Create service role policies
+-- Create service role policies for pricing tables
 CREATE POLICY "Allow service role to manage lenders" ON lenders
     FOR ALL USING (auth.role() = 'service_role');
 
@@ -73,305 +83,44 @@ CREATE POLICY "Allow service role to manage eligibility matrices" ON eligibility
 CREATE POLICY "Allow service role to manage pricing matrices" ON pricing_matrices
     FOR ALL USING (auth.role() = 'service_role');
 
--- Create user_profiles table for basic user information
-create table user_profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  first_name text not null,
-  last_name text not null,
-  email text not null,
-  created_at timestamp with time zone default now(),
-  updated_at timestamp with time zone default now()
+-- =====================================================
+-- PARTNER PROFILES & USER MANAGEMENT
+-- =====================================================
+
+-- Create partner_profiles table (consolidated with user_profiles)
+CREATE TABLE partner_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  partner_type TEXT CHECK (partner_type IN ('wholesaler', 'investor', 'real_estate_agent', 'marketing_partner')),
+  phone_number TEXT,
+  monthly_deal_volume INTEGER,
+  transaction_volume NUMERIC,
+  transaction_types TEXT[], -- e.g., ['Fix and Flip', 'Rental', 'Multifamily']
+  license_number TEXT, -- only required for real estate agents
+  license_state TEXT, -- only required for real estate agents
+  onboarded BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT partner_profiles_user_id_unique UNIQUE (user_id)
 );
 
--- Create partner_profiles table for onboarding information
-create table partner_profiles (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  partner_type text check (partner_type in ('wholesaler', 'investor', 'real_estate_agent', 'marketing_partner')),
-  phone_number text,
-  monthly_deal_volume integer,
-  transaction_volume numeric,
-  transaction_types text[], -- e.g., ['Fix and Flip', 'Rental', 'Multifamily']
-  license_number text, -- only required for real estate agents
-  license_state text, -- only required for real estate agents
-  onboarded boolean default false,
-  created_at timestamp with time zone default now(),
-  updated_at timestamp with time zone default now()
-);
-
--- Add RLS (Row Level Security) policies
-alter table user_profiles enable row level security;
-alter table partner_profiles enable row level security;
-
--- User profiles policies
-create policy "Users can view own profile" on user_profiles
-  for select using (auth.uid() = id);
-
-create policy "Users can update own profile" on user_profiles
-  for update using (auth.uid() = id);
-
-create policy "Users can insert own profile" on user_profiles
-  for insert with check (auth.uid() = id);
+-- Enable RLS for partner profiles
+ALTER TABLE partner_profiles ENABLE ROW LEVEL SECURITY;
 
 -- Partner profiles policies
-create policy "Users can view their own partner profile" on partner_profiles
-  for select using (auth.uid() = user_id);
+CREATE POLICY "Users can view their own partner profile" ON partner_profiles
+  FOR SELECT USING (auth.uid() = user_id);
 
-create policy "Users can insert their own partner profile" on partner_profiles
-  for insert with check (auth.uid() = user_id);
+CREATE POLICY "Users can insert their own partner profile" ON partner_profiles
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-create policy "Users can update their own partner profile" on partner_profiles
-  for update using (auth.uid() = user_id);
+CREATE POLICY "Users can update their own partner profile" ON partner_profiles
+  FOR UPDATE USING (auth.uid() = user_id);
 
--- Function to automatically create user_profile when user signs up
-create or replace function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.user_profiles (id, first_name, last_name, email)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'first_name', ''),
-    coalesce(new.raw_user_meta_data->>'last_name', ''),
-    new.email
-  );
-  return new;
-end;
-$$ language plpgsql security definer;
-
--- Trigger to automatically create user_profile on signup
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
--- Create loan_applications table for Phase 2 client dashboard
-create table loan_applications (
-  id uuid primary key default gen_random_uuid(),
-  partner_id uuid not null references partner_profiles(id) on delete cascade,
-  
-  -- Personal Info (Required)
-  first_name text not null,
-  last_name text not null,
-  email text,
-  ssn text,
-  date_of_birth date,
-  
-  -- Housing Info
-  property_address text,
-  current_residence text,
-  
-  -- Application status for dashboard categorization
-  status text not null default 'in_review' check (
-    status in ('in_review', 'approved', 'ineligible', 'denied', 'closed', 'missing_conditions')
-  ),
-  
-  -- Timestamps
-  created_at timestamp with time zone default now(),
-  updated_at timestamp with time zone default now()
-);
-
--- Create updated_at trigger
-create or replace function update_loan_applications_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
-
-create trigger update_loan_applications_updated_at
-  before update on loan_applications
-  for each row
-  execute function update_loan_applications_updated_at();
-
--- Enable RLS
-alter table loan_applications enable row level security;
-
--- RLS Policies: Partners can only access their own applications
--- First, we need to create a helper function to get partner_id from user_id
-create or replace function get_partner_id_from_user()
-returns uuid as $$
-begin
-  return (
-    select id 
-    from partner_profiles 
-    where user_id = auth.uid()
-  );
-end;
-$$ language plpgsql security definer;
-
--- Select policy: Partners can only see their own applications
-create policy "Partners can view their own applications"
-  on loan_applications for select
-  using (partner_id = get_partner_id_from_user());
-
--- Insert policy: Partners can only create applications for themselves
-create policy "Partners can create their own applications"
-  on loan_applications for insert
-  with check (partner_id = get_partner_id_from_user());
-
--- Update policy: Partners can only update their own applications
-create policy "Partners can update their own applications"
-  on loan_applications for update
-  using (partner_id = get_partner_id_from_user())
-  with check (partner_id = get_partner_id_from_user());
-
--- Delete policy: Partners can only delete their own applications
-create policy "Partners can delete their own applications"
-  on loan_applications for delete
-  using (partner_id = get_partner_id_from_user());
-
--- Create indexes for better performance
-create index loan_applications_partner_id_idx on loan_applications(partner_id);
-create index loan_applications_status_idx on loan_applications(status);
-create index loan_applications_created_at_idx on loan_applications(created_at desc);
--- Add enhanced fields to loan_applications table
-alter table loan_applications add column if not exists phone_number text;
-
--- Property information enhancements
-alter table loan_applications add column if not exists property_is_tbd boolean default false;
-alter table loan_applications add column if not exists property_type text;
-
--- Loan information
-alter table loan_applications add column if not exists loan_objective text check (
-  loan_objective in ('refi', 'purchase')
-);
-alter table loan_applications add column if not exists loan_type text;
-
--- Enhanced loan types (similar to transaction types from onboarding)
-alter table loan_applications add column if not exists loan_property_types text[] default '{}';
-
--- Assets information
-alter table loan_applications add column if not exists total_assets numeric default 0;
-alter table loan_applications add column if not exists bank_accounts jsonb default '[]'::jsonb;
-
--- File uploads for bank statements (we'll store file paths/URLs)
-alter table loan_applications add column if not exists bank_statements jsonb default '[]'::jsonb;
-
--- Add more structured asset tracking
--- bank_accounts will store: [{"bank_name": "Bank of America", "account_type": "Checking", "balance": 5000, "statement_months": 2}]
--- bank_statements will store: [{"account_id": "uuid", "month": "2024-01", "file_url": "path/to/file"}]
-
--- Update the status check constraint to ensure we have the correct statuses
-alter table loan_applications drop constraint if exists loan_applications_status_check;
-alter table loan_applications add constraint loan_applications_status_check check (
-  status in ('in_review', 'approved', 'ineligible', 'denied', 'closed', 'missing_conditions', 'pending_documents')
-);
-
--- Add index for new searchable fields
-create index if not exists loan_applications_loan_objective_idx on loan_applications(loan_objective);
-create index if not exists loan_applications_loan_type_idx on loan_applications(loan_type);
-create index if not exists loan_applications_property_type_idx on loan_applications(property_type);
--- Remove the loan_property_types column since we simplified the loan selection
--- Now we only use loan_objective (refi/purchase) and loan_type (specific type based on objective)
-alter table loan_applications drop column if exists loan_property_types;
--- Add income documentation support for home owner loans
--- This will only be required when loan_type = 'homeowner'
-
--- Income information
-alter table loan_applications add column if not exists total_income numeric default 0;
-alter table loan_applications add column if not exists income_sources jsonb default '[]'::jsonb;
-
--- Income document uploads
-alter table loan_applications add column if not exists income_documents jsonb default '[]'::jsonb;
-
--- Structure for income_sources:
--- [
---   {
---     "id": "uuid",
---     "type": "w2" | "alimony" | "ssn" | "1099",
---     "amount": 50000,
---     "description": "Primary Employment"
---   }
--- ]
-
--- Structure for income_documents:
--- [
---   {
---     "id": "uuid",
---     "document_type": "w2" | "alimony" | "ssn" | "1099" | "1040_tax_return",
---     "file_name": "w2_2023.pdf",
---     "file_size": 1024000,
---     "file_url": "path/to/file",
---     "income_source_id": "uuid", -- links to income_sources (null for 1040)
---     "uploaded_at": "2025-01-01T00:00:00Z"
---   }
--- ]
-
--- Add indexes for better performance
-create index if not exists loan_applications_total_income_idx on loan_applications(total_income);
-create index if not exists loan_applications_loan_type_idx on loan_applications(loan_type) where loan_type = 'homeowner';
--- Create the loan-documents storage bucket
-insert into storage.buckets (id, name, public)
-values ('loan-documents', 'loan-documents', true);
-
--- Allow authenticated users to upload files
-create policy "Partners can upload files" on storage.objects
-for insert with check (
-  bucket_id = 'loan-documents' 
-  and auth.role() = 'authenticated'
-);
-
--- Allow partners to view their own files
-create policy "Partners can view own files" on storage.objects
-for select using (
-  bucket_id = 'loan-documents' 
-  and auth.role() = 'authenticated'
-  and (storage.foldername(name))[1] in (
-    select p.id::text 
-    from partner_profiles p 
-    where p.user_id = auth.uid()
-  )
-);
-
--- Allow partners to delete their own files
-create policy "Partners can delete own files" on storage.objects
-for delete using (
-  bucket_id = 'loan-documents' 
-  and auth.role() = 'authenticated'
-  and (storage.foldername(name))[1] in (
-    select p.id::text 
-    from partner_profiles p 
-    where p.user_id = auth.uid()
-  )
-);
-
--- Allow partners to update their own files (if needed)
-create policy "Partners can update own files" on storage.objects
-for update using (
-  bucket_id = 'loan-documents' 
-  and auth.role() = 'authenticated'
-  and (storage.foldername(name))[1] in (
-    select p.id::text 
-    from partner_profiles p 
-    where p.user_id = auth.uid()
-  )
-); -- Consolidate user_profiles and partner_profiles into a single partner_profiles table
--- This eliminates redundancy since every user in the system is a partner
-
--- First, add the user profile fields to partner_profiles
-ALTER TABLE partner_profiles 
-ADD COLUMN first_name text,
-ADD COLUMN last_name text,
-ADD COLUMN email text;
-
--- Update partner_profiles with data from user_profiles
-UPDATE partner_profiles 
-SET 
-  first_name = up.first_name,
-  last_name = up.last_name,
-  email = up.email
-FROM user_profiles up
-WHERE partner_profiles.user_id = up.id;
-
--- Make the new fields NOT NULL after populating them
-ALTER TABLE partner_profiles 
-ALTER COLUMN first_name SET NOT NULL,
-ALTER COLUMN last_name SET NOT NULL,
-ALTER COLUMN email SET NOT NULL;
-
--- Drop the user_profiles table since it's now redundant
-DROP TABLE user_profiles;
-
--- Update the trigger function to create partner_profiles instead of user_profiles
+-- Function to automatically create partner_profile when user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
@@ -386,30 +135,271 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- The trigger will continue to work with the updated function
--- No need to recreate the trigger since it references the function by name
+-- Trigger to automatically create partner_profile on signup
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- Update RLS policies to work with the consolidated table
--- Drop old policies (use IF EXISTS to avoid errors)
-DROP POLICY IF EXISTS "Users can view own profile" ON partner_profiles;
-DROP POLICY IF EXISTS "Users can insert their own partner profile" ON partner_profiles;
-DROP POLICY IF EXISTS "Users can update their own partner profile" ON partner_profiles;
+-- =====================================================
+-- LOAN APPLICATIONS - COMPLETE SCHEMA
+-- =====================================================
 
--- Drop existing policies that might conflict
-DROP POLICY IF EXISTS "Users can view their own partner profile" ON partner_profiles;
-DROP POLICY IF EXISTS "Users can insert their own partner profile" ON partner_profiles;
-DROP POLICY IF EXISTS "Users can update their own partner profile" ON partner_profiles;
+-- Create loan_applications table with all fields
+CREATE TABLE loan_applications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+  
+  -- Personal Info (Required)
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  email TEXT,
+  phone_number TEXT,
+  ssn TEXT,
+  date_of_birth DATE,
+  
+  -- Property Info
+  property_address TEXT,
+  property_is_tbd BOOLEAN DEFAULT FALSE,
+  property_type TEXT,
+  current_residence TEXT,
+  
+  -- Loan Information
+  loan_objective TEXT CHECK (loan_objective IN ('refi', 'purchase')),
+  loan_type TEXT,
+  
+  -- Income Information (for homeowner loans)
+  total_income NUMERIC DEFAULT 0,
+  income_sources JSONB DEFAULT '[]'::jsonb,
+  income_documents JSONB DEFAULT '[]'::jsonb,
+  
+  -- Assets Information
+  total_assets NUMERIC DEFAULT 0,
+  bank_accounts JSONB DEFAULT '[]'::jsonb,
+  bank_statements JSONB DEFAULT '[]'::jsonb,
+  
+  -- DSCR Calculator Data - Core Fields
+  dscr_data JSONB,
+  estimated_home_value NUMERIC,
+  loan_amount NUMERIC,
+  down_payment_percentage NUMERIC,
+  monthly_rental_income NUMERIC,
+  annual_property_insurance NUMERIC,
+  annual_property_taxes NUMERIC,
+  monthly_hoa_fee NUMERIC,
+  is_short_term_rental BOOLEAN DEFAULT FALSE,
+  property_state TEXT,
+  broker_points NUMERIC,
+  broker_admin_fee NUMERIC,
+  broker_ysp NUMERIC,
+  selected_loan_product JSONB,
+  dscr_results JSONB,
+  
+  -- DSCR Calculator Data - Additional Fields
+  fico_score_range TEXT,
+  prepayment_penalty TEXT,
+  discount_points NUMERIC,
+  transaction_type TEXT,
+  property_zip_code TEXT,
+  property_city TEXT,
+  property_county TEXT,
+  property_occupancy TEXT,
+  property_use TEXT,
+  property_condition TEXT,
+  property_year_built INTEGER,
+  property_square_footage NUMERIC,
+  property_bedrooms INTEGER,
+  property_bathrooms NUMERIC,
+  property_lot_size NUMERIC,
+  property_zoning TEXT,
+  property_appraisal_value NUMERIC,
+  property_purchase_price NUMERIC,
+  property_seller_concessions NUMERIC,
+  property_closing_costs NUMERIC,
+  property_repairs_improvements NUMERIC,
+  property_reserves NUMERIC,
+  property_escrow_accounts BOOLEAN DEFAULT FALSE,
+  property_flood_insurance NUMERIC,
+  property_hazard_insurance NUMERIC,
+  property_title_insurance NUMERIC,
+  property_survey_fees NUMERIC,
+  property_recording_fees NUMERIC,
+  property_transfer_taxes NUMERIC,
+  property_other_costs NUMERIC,
+  
+  -- Application status for dashboard categorization
+  status TEXT NOT NULL DEFAULT 'in_review' CHECK (
+    status IN ('in_review', 'approved', 'ineligible', 'denied', 'closed', 'missing_conditions', 'pending_documents')
+  ),
+  
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- Create new consolidated policies
-CREATE POLICY "Users can view their own partner profile" ON partner_profiles
-  FOR SELECT USING (auth.uid() = user_id);
+-- Create updated_at trigger for loan_applications
+CREATE OR REPLACE FUNCTION update_loan_applications_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  new.updated_at = now();
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql;
 
-CREATE POLICY "Users can insert their own partner profile" ON partner_profiles
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER update_loan_applications_updated_at
+  BEFORE UPDATE ON loan_applications
+  FOR EACH ROW
+  EXECUTE FUNCTION update_loan_applications_updated_at();
 
-CREATE POLICY "Users can update their own partner profile" ON partner_profiles
-  FOR UPDATE USING (auth.uid() = user_id);
+-- Enable RLS for loan applications
+ALTER TABLE loan_applications ENABLE ROW LEVEL SECURITY;
 
--- Add a unique constraint on user_id to ensure one profile per user
-ALTER TABLE partner_profiles 
-ADD CONSTRAINT partner_profiles_user_id_unique UNIQUE (user_id); 
+-- RLS Policies: Partners can only access their own applications
+-- Helper function to get partner_id from user_id
+CREATE OR REPLACE FUNCTION get_partner_id_from_user()
+RETURNS uuid AS $$
+BEGIN
+  RETURN (
+    SELECT id 
+    FROM partner_profiles 
+    WHERE user_id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Select policy: Partners can only see their own applications
+CREATE POLICY "Partners can view their own applications"
+  ON loan_applications FOR SELECT
+  USING (partner_id = get_partner_id_from_user());
+
+-- Insert policy: Partners can only create applications for themselves
+CREATE POLICY "Partners can create their own applications"
+  ON loan_applications FOR INSERT
+  WITH CHECK (partner_id = get_partner_id_from_user());
+
+-- Update policy: Partners can only update their own applications
+CREATE POLICY "Partners can update their own applications"
+  ON loan_applications FOR UPDATE
+  USING (partner_id = get_partner_id_from_user())
+  WITH CHECK (partner_id = get_partner_id_from_user());
+
+-- Delete policy: Partners can only delete their own applications
+CREATE POLICY "Partners can delete their own applications"
+  ON loan_applications FOR DELETE
+  USING (partner_id = get_partner_id_from_user());
+
+-- Create indexes for better performance
+CREATE INDEX loan_applications_partner_id_idx ON loan_applications(partner_id);
+CREATE INDEX loan_applications_status_idx ON loan_applications(status);
+CREATE INDEX loan_applications_created_at_idx ON loan_applications(created_at DESC);
+CREATE INDEX loan_applications_loan_objective_idx ON loan_applications(loan_objective);
+CREATE INDEX loan_applications_loan_type_idx ON loan_applications(loan_type);
+CREATE INDEX loan_applications_property_type_idx ON loan_applications(property_type);
+CREATE INDEX loan_applications_total_income_idx ON loan_applications(total_income);
+
+-- =====================================================
+-- FILE STORAGE
+-- =====================================================
+
+-- Create the loan-documents storage bucket
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('loan-documents', 'loan-documents', true);
+
+-- Allow authenticated users to upload files
+CREATE POLICY "Partners can upload files" ON storage.objects
+FOR INSERT WITH CHECK (
+  bucket_id = 'loan-documents' 
+  AND auth.role() = 'authenticated'
+);
+
+-- Allow partners to view their own files
+CREATE POLICY "Partners can view own files" ON storage.objects
+FOR SELECT USING (
+  bucket_id = 'loan-documents' 
+  AND auth.role() = 'authenticated'
+  AND (storage.foldername(name))[1] IN (
+    SELECT p.id::text 
+    FROM partner_profiles p 
+    WHERE p.user_id = auth.uid()
+  )
+);
+
+-- Allow partners to delete their own files
+CREATE POLICY "Partners can delete own files" ON storage.objects
+FOR DELETE USING (
+  bucket_id = 'loan-documents' 
+  AND auth.role() = 'authenticated'
+  AND (storage.foldername(name))[1] IN (
+    SELECT p.id::text 
+    FROM partner_profiles p 
+    WHERE p.user_id = auth.uid()
+  )
+);
+
+-- Allow partners to update their own files (if needed)
+CREATE POLICY "Partners can update own files" ON storage.objects
+FOR UPDATE USING (
+  bucket_id = 'loan-documents' 
+  AND auth.role() = 'authenticated'
+  AND (storage.foldername(name))[1] IN (
+    SELECT p.id::text 
+    FROM partner_profiles p 
+    WHERE p.user_id = auth.uid()
+  )
+);
+
+-- =====================================================
+-- COMMENTS FOR DOCUMENTATION
+-- =====================================================
+
+-- DSCR Calculator Data Comments
+COMMENT ON COLUMN loan_applications.dscr_data IS 'Complete DSCR calculator data as JSON';
+COMMENT ON COLUMN loan_applications.estimated_home_value IS 'Estimated property value from DSCR calculator';
+COMMENT ON COLUMN loan_applications.loan_amount IS 'Requested loan amount from DSCR calculator';
+COMMENT ON COLUMN loan_applications.down_payment_percentage IS 'Down payment percentage from DSCR calculator';
+COMMENT ON COLUMN loan_applications.monthly_rental_income IS 'Monthly rental income from DSCR calculator';
+COMMENT ON COLUMN loan_applications.annual_property_insurance IS 'Annual property insurance from DSCR calculator';
+COMMENT ON COLUMN loan_applications.annual_property_taxes IS 'Annual property taxes from DSCR calculator';
+COMMENT ON COLUMN loan_applications.monthly_hoa_fee IS 'Monthly HOA fee from DSCR calculator';
+COMMENT ON COLUMN loan_applications.is_short_term_rental IS 'Whether this is a short-term rental property';
+COMMENT ON COLUMN loan_applications.property_state IS 'Property state from DSCR calculator';
+COMMENT ON COLUMN loan_applications.broker_points IS 'Broker points from DSCR calculator';
+COMMENT ON COLUMN loan_applications.broker_admin_fee IS 'Broker admin fee from DSCR calculator';
+COMMENT ON COLUMN loan_applications.broker_ysp IS 'Broker YSP from DSCR calculator';
+COMMENT ON COLUMN loan_applications.selected_loan_product IS 'Selected loan product details from DSCR calculator';
+COMMENT ON COLUMN loan_applications.dscr_results IS 'DSCR calculation results including ratio, NOI, cash flow';
+
+-- Additional DSCR Fields Comments
+COMMENT ON COLUMN loan_applications.fico_score_range IS 'Estimated FICO score range from DSCR calculator';
+COMMENT ON COLUMN loan_applications.prepayment_penalty IS 'Prepayment penalty terms from DSCR calculator';
+COMMENT ON COLUMN loan_applications.discount_points IS 'Discount points from DSCR calculator';
+COMMENT ON COLUMN loan_applications.transaction_type IS 'Transaction type (purchase/refinance) from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_zip_code IS 'Property ZIP code from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_city IS 'Property city from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_county IS 'Property county from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_occupancy IS 'Property occupancy type from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_use IS 'Property use type from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_condition IS 'Property condition from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_year_built IS 'Property year built from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_square_footage IS 'Property square footage from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_bedrooms IS 'Number of bedrooms from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_bathrooms IS 'Number of bathrooms from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_lot_size IS 'Lot size from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_zoning IS 'Property zoning from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_appraisal_value IS 'Property appraisal value from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_purchase_price IS 'Property purchase price from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_seller_concessions IS 'Seller concessions from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_closing_costs IS 'Closing costs from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_repairs_improvements IS 'Repairs and improvements from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_reserves IS 'Reserves from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_escrow_accounts IS 'Escrow accounts required from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_flood_insurance IS 'Flood insurance from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_hazard_insurance IS 'Hazard insurance from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_title_insurance IS 'Title insurance from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_survey_fees IS 'Survey fees from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_recording_fees IS 'Recording fees from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_transfer_taxes IS 'Transfer taxes from DSCR calculator';
+COMMENT ON COLUMN loan_applications.property_other_costs IS 'Other costs from DSCR calculator';
+
+-- =====================================================
+-- SCHEMA COMPLETE
+-- ===================================================== 

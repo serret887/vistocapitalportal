@@ -17,19 +17,27 @@ import { v4 as uuidv4 } from 'uuid'
 interface EnhancedApplicationFormProps {
   onSuccess?: () => void
   onCancel?: () => void
+  initialData?: LoanApplicationFormData
+  isEditing?: boolean
 }
 
 interface ValidationErrors {
   [key: string]: string
 }
 
-export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplicationFormProps) {
+export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEditing = false }: EnhancedApplicationFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [currentSection, setCurrentSection] = useState(0)
   const [errors, setErrors] = useState<ValidationErrors>({})
   
-  // Check for DSCR calculator data and pre-populate form
+  // Check for DSCR calculator data and pre-populate form, or use initial data for editing
   const getInitialFormData = (): LoanApplicationFormData => {
+    // If editing and initial data is provided, use that
+    if (isEditing && initialData) {
+      return initialData
+    }
+    
+    // Otherwise check for DSCR calculator data
     try {
       const dscrData = localStorage.getItem('dscrCalculatorData')
       if (dscrData) {
@@ -561,7 +569,24 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
     setIsLoading(true)
     
     try {
-      const { application, error } = await createLoanApplication(formData)
+      // Get DSCR data from localStorage if available
+      let dscrData = null
+      try {
+        const storedDscrData = localStorage.getItem('dscrCalculatorData')
+        if (storedDscrData) {
+          dscrData = JSON.parse(storedDscrData)
+        }
+      } catch (error) {
+        console.error('Error parsing DSCR data:', error)
+      }
+
+      // Include DSCR data in the submission
+      const submissionData = {
+        ...formData,
+        dscrData
+      }
+
+      const { application, error } = await createLoanApplication(submissionData)
       
       if (error) {
         toast.error(error)
@@ -1340,10 +1365,10 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
     <Card className="w-full max-w-6xl mx-auto border-2 border-border shadow-2xl bg-card">
       <CardHeader className="pb-8">
         <CardTitle className="text-3xl font-bold visto-dark-blue tracking-tight text-center">
-          Enhanced Loan Application
+          {isEditing ? 'Edit Application' : 'Enhanced Loan Application'}
         </CardTitle>
         <CardDescription className="text-lg visto-slate text-center mt-3">
-          Comprehensive client information for loan pre-qualification
+          {isEditing ? 'Update the application details below' : 'Comprehensive client information for loan pre-qualification'}
         </CardDescription>
         
         {/* Section Progress */}
@@ -1439,7 +1464,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel }: EnhancedApplica
                 disabled={isLoading}
                 className="px-16 py-4 text-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold tracking-wide transition-all duration-200 shadow-xl hover:shadow-2xl"
               >
-                {isLoading ? 'Creating Application...' : 'Submit Application'}
+                {isLoading ? (isEditing ? 'Updating Application...' : 'Creating Application...') : (isEditing ? 'Update Application' : 'Submit Application')}
               </Button>
             )}
           </div>
