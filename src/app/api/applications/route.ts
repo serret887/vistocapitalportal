@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
+import { sendApplicationNotification } from '@/lib/slack-notifications'
 import type { LoanApplicationFormData } from '@/types'
 
 // GET /api/applications - Get all applications for the current partner
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     // Get partner profile
     const { data: partnerProfile, error: partnerError } = await serverSupabase
       .from('partner_profiles')
-      .select('id')
+      .select('id, first_name, last_name, email, phone_number, company_name')
       .eq('user_id', user.id)
       .single()
 
@@ -211,6 +212,14 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create application' },
         { status: 500 }
       )
+    }
+
+    // Send Slack notification
+    try {
+      await sendApplicationNotification(application, partnerProfile)
+    } catch (notificationError) {
+      console.error('Failed to send Slack notification:', notificationError)
+      // Don't fail the request if notification fails
     }
 
     return NextResponse.json({
