@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { getLoanApplication, deleteLoanApplication, updateLoanApplication } from '@/lib/loan-applications'
-import type { LoanApplication } from '@/types'
+import { getLoans, createLoan, deleteLoan } from '@/lib/loans'
+import type { LoanApplication, Loan } from '@/types'
 import { 
   ArrowLeft, 
   User, 
@@ -30,7 +31,9 @@ import {
   Trash2,
   Download,
   Save,
-  X
+  X,
+  Plus,
+  Building2
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -39,12 +42,15 @@ import { LOAN_STATUS_LABELS, LOAN_STATUS_COLORS, type LoanObjective } from '@/ty
 export default function ViewApplicationPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [application, setApplication] = useState<LoanApplication | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [dscrData, setDscrData] = useState<any>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editedApplication, setEditedApplication] = useState<LoanApplication | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [loans, setLoans] = useState<Loan[]>([])
+  const [isLoadingLoans, setIsLoadingLoans] = useState(false)
 
   const applicationId = params.id as string
 
@@ -97,8 +103,71 @@ export default function ViewApplicationPage() {
       }
     }
 
+    const loadLoans = async () => {
+      if (!applicationId) return
+
+      setIsLoadingLoans(true)
+      try {
+        const { loans: loansData, error } = await getLoans(applicationId)
+        
+        if (error) {
+          console.error('Error loading loans:', error)
+          // Don't show error toast for loans, just log it
+        } else {
+          setLoans(loansData)
+        }
+      } catch (error) {
+        console.error('Error loading loans:', error)
+      } finally {
+        setIsLoadingLoans(false)
+      }
+    }
+
     loadApplication()
+    loadLoans()
   }, [applicationId, router])
+
+  // Handle returning from DSCR calculator with loan data
+  useEffect(() => {
+    const addLoan = searchParams.get('addLoan')
+    if (addLoan === 'true') {
+      const dscrData = localStorage.getItem('dscrCalculatorData')
+      const targetApplicationId = localStorage.getItem('targetApplicationId')
+      
+      if (dscrData && targetApplicationId === applicationId) {
+        // Clear the stored data
+        localStorage.removeItem('dscrCalculatorData')
+        localStorage.removeItem('targetApplicationId')
+        
+        // Create the loan from DSCR data
+        const handleAddLoanFromDSCR = async () => {
+          try {
+            const parsedDscrData = JSON.parse(dscrData)
+            const loanName = `DSCR Loan - ${parsedDscrData.property_state || 'Property'}`
+            const { createLoanFromDscrData } = await import('@/lib/loans')
+            const loanData = createLoanFromDscrData(parsedDscrData, loanName)
+            
+            const { loan, error } = await createLoan(applicationId, loanData)
+            
+            if (error) {
+              toast.error(error)
+              return
+            }
+
+            if (loan) {
+              setLoans(prev => [loan, ...prev])
+              toast.success('Loan added successfully from DSCR calculator!')
+            }
+          } catch (error) {
+            console.error('Error adding loan from DSCR:', error)
+            toast.error('Failed to add loan from DSCR calculator')
+          }
+        }
+        
+        handleAddLoanFromDSCR()
+      }
+    }
+  }, [searchParams, applicationId])
 
   const handleEdit = () => {
     setIsEditing(true)
@@ -191,6 +260,53 @@ export default function ViewApplicationPage() {
   const handleExport = () => {
     // TODO: Implement export functionality
     toast.info('Export functionality coming soon!')
+  }
+
+  const handleAddLoan = async () => {
+    if (!dscrData) {
+      toast.error('No DSCR data available to create loan')
+      return
+    }
+
+    try {
+      const loanName = `DSCR Loan - ${dscrData.property_state || 'Property'}`
+      const { createLoanFromDscrData } = await import('@/lib/loans')
+      const loanData = createLoanFromDscrData(dscrData, loanName)
+      
+      const { loan, error } = await createLoan(applicationId, loanData)
+      
+      if (error) {
+        toast.error(error)
+        return
+      }
+
+      if (loan) {
+        setLoans(prev => [loan, ...prev])
+        toast.success('Loan added successfully!')
+      }
+    } catch (error) {
+      console.error('Error adding loan:', error)
+      toast.error('Failed to add loan')
+    }
+  }
+
+  const handleDeleteLoan = async (loanId: string) => {
+    try {
+      const { success, error } = await deleteLoan(applicationId, loanId)
+      
+      if (error) {
+        toast.error(error)
+        return
+      }
+
+      if (success) {
+        setLoans(prev => prev.filter(loan => loan.id !== loanId))
+        toast.success('Loan deleted successfully!')
+      }
+    } catch (error) {
+      console.error('Error deleting loan:', error)
+      toast.error('Failed to delete loan')
+    }
   }
 
   const formatCurrency = (amount: number) => {
@@ -672,6 +788,11 @@ export default function ViewApplicationPage() {
 
 
 
+
+        </div>
+
+        {/* Financial Information and Timeline Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
           {/* Financial Information */}
           <Card>
             <CardHeader>
@@ -717,14 +838,20 @@ export default function ViewApplicationPage() {
                 )}
               </div>
               
+              {/* Income Sources */}
               {application.income_sources && application.income_sources.length > 0 ? (
                 <div>
-                  <label className="text-sm font-medium visto-slate">Income Sources</label>
-                  <div className="space-y-2 mt-2">
-                    {application.income_sources.map((source, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <span className="text-sm">{source.type}</span>
-                        <span className="text-sm font-medium">{formatCurrency(source.amount)}</span>
+                  <Label className="text-sm font-medium visto-slate">Income Sources</Label>
+                  <div className="mt-2 space-y-2">
+                    {application.income_sources.map((source: any, index: number) => (
+                      <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-sm visto-dark-blue">{source.type}</p>
+                            <p className="text-xs visto-slate">{source.employer || 'No employer specified'}</p>
+                          </div>
+                          <p className="text-sm font-medium visto-dark-blue">{formatCurrency(source.amount)}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -735,17 +862,20 @@ export default function ViewApplicationPage() {
                 </div>
               )}
               
+              {/* Bank Accounts */}
               {application.bank_accounts && application.bank_accounts.length > 0 ? (
                 <div>
-                  <label className="text-sm font-medium visto-slate">Bank Accounts</label>
-                  <div className="space-y-2 mt-2">
-                    {application.bank_accounts.map((account, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <div>
-                          <span className="text-sm font-medium">{account.bank_name}</span>
-                          <span className="text-xs text-gray-500 ml-2">({account.account_type})</span>
+                  <Label className="text-sm font-medium visto-slate">Bank Accounts</Label>
+                  <div className="mt-2 space-y-2">
+                    {application.bank_accounts.map((account: any, index: number) => (
+                      <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium text-sm visto-dark-blue">{account.institution}</p>
+                            <p className="text-xs visto-slate">{account.account_type}</p>
+                          </div>
+                          <p className="text-sm font-medium visto-dark-blue">{formatCurrency(account.balance)}</p>
                         </div>
-                        <span className="text-sm font-medium">{formatCurrency(account.balance)}</span>
                       </div>
                     ))}
                   </div>
@@ -813,40 +943,151 @@ export default function ViewApplicationPage() {
               )}
             </CardContent>
           </Card>
-        </div>
 
-        {/* Application Timeline */}
-        <Card className="mt-8">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-visto-gold" />
-              <CardTitle className="text-xl font-semibold visto-dark-blue">
-                Application Timeline
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-3 h-3 bg-visto-gold rounded-full"></div>
-                <div>
-                  <p className="font-medium visto-dark-blue">Application Created</p>
-                  <p className="text-sm visto-slate">{formatDate(application.created_at)}</p>
-                </div>
+          {/* Application Timeline */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-visto-gold" />
+                <CardTitle className="text-xl font-semibold visto-dark-blue">
+                  Application Timeline
+                </CardTitle>
               </div>
-              
-              {application.updated_at !== application.created_at && (
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-3 h-3 bg-visto-slate rounded-full"></div>
+                  <div className="w-3 h-3 bg-visto-gold rounded-full"></div>
                   <div>
-                    <p className="font-medium visto-dark-blue">Last Updated</p>
-                    <p className="text-sm visto-slate">{formatDate(application.updated_at)}</p>
+                    <p className="font-medium visto-dark-blue">Application Created</p>
+                    <p className="text-sm visto-slate">{formatDate(application.created_at)}</p>
                   </div>
                 </div>
+                
+                {application.updated_at !== application.created_at && (
+                  <div className="flex items-center gap-4">
+                    <div className="w-3 h-3 bg-visto-slate rounded-full"></div>
+                    <div>
+                      <p className="font-medium visto-dark-blue">Last Updated</p>
+                      <p className="text-sm visto-slate">{formatDate(application.updated_at)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Loans Section */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-visto-gold" />
+                  <CardTitle className="text-xl font-semibold visto-dark-blue">
+                    Loans
+                  </CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    onClick={() => router.push('/dashboard/dscr-calculator?applicationId=' + applicationId)}
+                    className="flex items-center gap-2 bg-visto-gold hover:bg-visto-dark-gold text-white"
+                  >
+                    <Plus className="h-4 w-4" />
+                    New Loan
+                  </Button>
+                  {dscrData && (
+                    <Button 
+                      onClick={handleAddLoan}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add from Existing DSCR
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLoans ? (
+                <div className="text-center py-8">
+                  <div className="w-6 h-6 border-2 border-visto-gold border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-sm visto-slate">Loading loans...</p>
+                </div>
+              ) : loans.length === 0 ? (
+                <div className="text-center py-8">
+                  <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-lg font-medium visto-slate mb-2">No loans yet</p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    {dscrData 
+                      ? 'Click "Add Loan from DSCR" to create a loan from your DSCR calculator data'
+                      : 'Loans will appear here once they are added to this application'
+                    }
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {loans.map((loan) => (
+                    <div key={loan.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold visto-dark-blue">{loan.loan_name}</h4>
+                          <p className="text-sm visto-slate">{loan.loan_type} • {loan.loan_objective}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={loan.loan_status === 'approved' ? 'default' : 'secondary'}
+                            className={loan.loan_status === 'approved' ? 'bg-green-100 text-green-800' : ''}
+                          >
+                            {loan.loan_status}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteLoan(loan.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="visto-slate">Loan Amount:</span>
+                          <p className="font-medium">{loan.loan_amount ? formatCurrency(loan.loan_amount) : 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span className="visto-slate">Interest Rate:</span>
+                          <p className="font-medium">{loan.interest_rate ? `${loan.interest_rate}%` : 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span className="visto-slate">DSCR Ratio:</span>
+                          <p className="font-medium">{loan.dscr_ratio ? loan.dscr_ratio.toFixed(2) : 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span className="visto-slate">Cash Flow:</span>
+                          <p className="font-medium">{loan.cash_flow ? formatCurrency(loan.cash_flow) : 'N/A'}</p>
+                        </div>
+                      </div>
+                      
+                      {loan.property_address && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <p className="text-sm visto-slate">
+                            <MapPin className="h-3 w-3 inline mr-1" />
+                            {loan.property_address}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

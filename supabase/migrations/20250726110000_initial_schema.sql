@@ -401,5 +401,188 @@ COMMENT ON COLUMN loan_applications.property_transfer_taxes IS 'Transfer taxes f
 COMMENT ON COLUMN loan_applications.property_other_costs IS 'Other costs from DSCR calculator';
 
 -- =====================================================
+-- LOANS (Multiple loans per application)
+-- =====================================================
+
+-- Drop existing table if it exists
+DROP TABLE IF EXISTS loans CASCADE;
+
+-- Create loans table
+CREATE TABLE loans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  application_id UUID NOT NULL REFERENCES loan_applications(id) ON DELETE CASCADE,
+  
+  -- Loan Basic Information
+  loan_name TEXT NOT NULL, -- e.g., "Primary Residence", "Investment Property 1", "Fix & Flip"
+  loan_type TEXT NOT NULL, -- e.g., "DSCR", "Conventional", "FHA", "VA", "Hard Money"
+  loan_objective TEXT NOT NULL CHECK (loan_objective IN ('purchase', 'refi', 'cash_out_refi')),
+  loan_status TEXT NOT NULL DEFAULT 'pending' CHECK (
+    loan_status IN ('pending', 'pre_approved', 'approved', 'funded', 'denied', 'withdrawn')
+  ),
+  
+  -- Property Information
+  property_address TEXT,
+  property_type TEXT,
+  property_state TEXT,
+  property_zip_code TEXT,
+  property_city TEXT,
+  property_county TEXT,
+  property_occupancy TEXT, -- "Primary", "Secondary", "Investment"
+  property_use TEXT, -- "Rental", "Fix & Flip", "Owner Occupied"
+  property_condition TEXT,
+  property_year_built INTEGER,
+  property_square_footage NUMERIC,
+  property_bedrooms INTEGER,
+  property_bathrooms NUMERIC,
+  property_lot_size NUMERIC,
+  property_zoning TEXT,
+  
+  -- Financial Information
+  estimated_home_value NUMERIC,
+  purchase_price NUMERIC,
+  loan_amount NUMERIC,
+  down_payment_amount NUMERIC,
+  down_payment_percentage NUMERIC,
+  closing_costs NUMERIC,
+  seller_concessions NUMERIC,
+  repairs_improvements NUMERIC,
+  reserves NUMERIC,
+  
+  -- Income & Cash Flow (for DSCR loans)
+  monthly_rental_income NUMERIC,
+  annual_property_insurance NUMERIC,
+  annual_property_taxes NUMERIC,
+  monthly_hoa_fee NUMERIC,
+  monthly_mortgage_payment NUMERIC,
+  noi NUMERIC, -- Net Operating Income
+  dscr_ratio NUMERIC, -- Debt Service Coverage Ratio
+  cash_flow NUMERIC,
+  
+  -- Loan Terms
+  interest_rate NUMERIC,
+  loan_term_years INTEGER,
+  prepayment_penalty TEXT,
+  discount_points NUMERIC,
+  
+  -- Borrower Information
+  fico_score_range TEXT,
+  
+  -- Broker Information
+  broker_points NUMERIC,
+  broker_admin_fee NUMERIC,
+  broker_ysp NUMERIC,
+  
+  -- Lender Information
+  lender_name TEXT,
+  loan_product TEXT,
+  selected_loan_product JSONB,
+  
+  -- Additional Costs
+  flood_insurance NUMERIC,
+  hazard_insurance NUMERIC,
+  title_insurance NUMERIC,
+  survey_fees NUMERIC,
+  recording_fees NUMERIC,
+  transfer_taxes NUMERIC,
+  other_costs NUMERIC,
+  
+  -- Flags
+  is_short_term_rental BOOLEAN DEFAULT FALSE,
+  escrow_accounts BOOLEAN DEFAULT FALSE,
+  
+  -- Additional Data
+  loan_data JSONB, -- Store any additional loan-specific data
+  notes TEXT,
+  
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add comments for documentation
+COMMENT ON TABLE loans IS 'Multiple loans can be associated with a single loan application';
+COMMENT ON COLUMN loans.loan_name IS 'User-friendly name for the loan (e.g., "Primary Residence", "Investment Property 1")';
+COMMENT ON COLUMN loans.loan_type IS 'Type of loan (DSCR, Conventional, FHA, VA, Hard Money, etc.)';
+COMMENT ON COLUMN loans.loan_objective IS 'Purpose of the loan (purchase, refi, cash_out_refi)';
+COMMENT ON COLUMN loans.loan_status IS 'Current status of this specific loan';
+COMMENT ON COLUMN loans.property_occupancy IS 'How the property will be occupied (Primary, Secondary, Investment)';
+COMMENT ON COLUMN loans.property_use IS 'How the property will be used (Rental, Fix & Flip, Owner Occupied)';
+COMMENT ON COLUMN loans.dscr_ratio IS 'Debt Service Coverage Ratio for DSCR loans';
+COMMENT ON COLUMN loans.noi IS 'Net Operating Income for DSCR loans';
+COMMENT ON COLUMN loans.cash_flow IS 'Monthly cash flow after all expenses';
+
+-- Create indexes for performance
+CREATE INDEX idx_loans_application_id ON loans(application_id);
+CREATE INDEX idx_loans_status ON loans(loan_status);
+CREATE INDEX idx_loans_type ON loans(loan_type);
+CREATE INDEX idx_loans_created_at ON loans(created_at);
+
+-- Create RLS policies for loans table
+ALTER TABLE loans ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Partners can only see their own loans
+CREATE POLICY "Partners can view their own loans" ON loans
+  FOR SELECT USING (
+    application_id IN (
+      SELECT id FROM loan_applications 
+      WHERE partner_id IN (
+        SELECT id FROM partner_profiles 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+-- Policy: Partners can insert their own loans
+CREATE POLICY "Partners can insert their own loans" ON loans
+  FOR INSERT WITH CHECK (
+    application_id IN (
+      SELECT id FROM loan_applications 
+      WHERE partner_id IN (
+        SELECT id FROM partner_profiles 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+-- Policy: Partners can update their own loans
+CREATE POLICY "Partners can update their own loans" ON loans
+  FOR UPDATE USING (
+    application_id IN (
+      SELECT id FROM loan_applications 
+      WHERE partner_id IN (
+        SELECT id FROM partner_profiles 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+-- Policy: Partners can delete their own loans
+CREATE POLICY "Partners can delete their own loans" ON loans
+  FOR DELETE USING (
+    application_id IN (
+      SELECT id FROM loan_applications 
+      WHERE partner_id IN (
+        SELECT id FROM partner_profiles 
+        WHERE user_id = auth.uid()
+      )
+    )
+  );
+
+-- Create function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_loans_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for updated_at
+CREATE TRIGGER update_loans_updated_at
+  BEFORE UPDATE ON loans
+  FOR EACH ROW
+  EXECUTE FUNCTION update_loans_updated_at();
+
+-- =====================================================
 -- SCHEMA COMPLETE
 -- ===================================================== 

@@ -1,0 +1,118 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient, getCurrentUserFromRequest } from '@/lib/auth'
+
+// GET /api/applications/[id]/loans - Get all loans for an application
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createServerSupabaseClient()
+    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const applicationId = params.id
+
+    // First verify the application belongs to the current user
+    const { data: application, error: appError } = await supabase
+      .from('loan_applications')
+      .select('id, partner_id')
+      .eq('id', applicationId)
+      .single()
+
+    if (appError || !application) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 })
+    }
+
+    // Get partner_id for the current user
+    const { data: partnerProfile } = await supabase
+      .from('partner_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!partnerProfile || application.partner_id !== partnerProfile.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // Get all loans for this application
+    const { data: loans, error } = await supabase
+      .from('loans')
+      .select('*')
+      .eq('application_id', applicationId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching loans:', error)
+      return NextResponse.json({ error: 'Failed to fetch loans' }, { status: 500 })
+    }
+
+    return NextResponse.json({ loans: loans || [] })
+  } catch (error) {
+    console.error('Error in GET /api/applications/[id]/loans:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+// POST /api/applications/[id]/loans - Create a new loan for an application
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createServerSupabaseClient()
+    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const applicationId = params.id
+    const loanData = await request.json()
+
+    // First verify the application belongs to the current user
+    const { data: application, error: appError } = await supabase
+      .from('loan_applications')
+      .select('id, partner_id')
+      .eq('id', applicationId)
+      .single()
+
+    if (appError || !application) {
+      return NextResponse.json({ error: 'Application not found' }, { status: 404 })
+    }
+
+    // Get partner_id for the current user
+    const { data: partnerProfile } = await supabase
+      .from('partner_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!partnerProfile || application.partner_id !== partnerProfile.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // Create the new loan
+    const { data: loan, error } = await supabase
+      .from('loans')
+      .insert({
+        application_id: applicationId,
+        ...loanData
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error creating loan:', error)
+      return NextResponse.json({ error: 'Failed to create loan' }, { status: 500 })
+    }
+
+    return NextResponse.json({ loan })
+  } catch (error) {
+    console.error('Error in POST /api/applications/[id]/loans:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+} 

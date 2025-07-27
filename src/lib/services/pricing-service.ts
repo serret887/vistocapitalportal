@@ -60,14 +60,47 @@ export class PricingService {
                 hasBaseRates: !!matrix.base_rates
             });
 
-            const validation = validateLoanEligibility(matrix, input);
+            // Process the input to ensure all required fields are properly formatted
+            const processedInput = {
+                // Convert FICO score range to number
+                fico: (input as any).ficoScore === '780+' ? 780 : parseInt((input as any).ficoScore?.split('-')[0] || '740'),
+                // Calculate LTV
+                ltv: (input.loanAmount / input.estimatedHomeValue) * 100,
+                // Calculate DSCR (will be recalculated in pricing)
+                dscr: 1.25, // Default, will be calculated properly in pricing
+                // Ensure all required fields are present
+                loanPurpose: (input as any).transactionType === 'purchase' ? 'purchase' : 'refinance',
+                propertyType: input.propertyType,
+                isShortTermRental: (input as any).isShortTermRental || false,
+                brokerComp: (input as any).brokerPoints || 0,
+                brokerAdminFee: (input as any).brokerAdminFee || 0,
+                prepayStructure: (input as any).prepaymentPenalty || '5/5/5/5/5',
+                units: (input as any).units || 1,
+                // Copy all other fields from input
+                loanAmount: input.loanAmount,
+                propertyState: input.propertyState,
+                occupancyType: input.occupancyType,
+                product: input.product,
+                interestOnly: input.interestOnly,
+                ysp: input.ysp,
+                discountPoints: input.discountPoints,
+                estimatedHomeValue: input.estimatedHomeValue,
+                monthlyRentalIncome: input.monthlyRentalIncome,
+                annualPropertyInsurance: input.annualPropertyInsurance,
+                annualPropertyTaxes: input.annualPropertyTaxes,
+                monthlyHoaFee: input.monthlyHoaFee,
+                remainingMortgage: input.remainingMortgage,
+                acquisitionDate: input.acquisitionDate
+            };
+
+            const validation = validateLoanEligibility(matrix, processedInput);
 
             if (!validation.isValid) {
                 return { success: false, error: 'Loan not eligible', validation };
             }
 
             const results: PricingResult[] = LOAN_OPTIONS.map((option: LoanOption) => {
-                const pricingResult = calculatePricing(matrix, input, option.baseProduct, option.interestOnly);
+                const pricingResult = calculatePricing(matrix, processedInput, option.baseProduct, option.interestOnly);
                 
                 const breakdown: Breakdown = {
                     baseRate: pricingResult.baseRate,

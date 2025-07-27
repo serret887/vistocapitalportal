@@ -10,8 +10,8 @@ import { BrokerCompensation } from "@/components/dashboard/broker-compensation";
 import { LoanOptions } from "@/components/dashboard/loan-options";
 import { DSCRResults } from "@/components/dashboard/dscr-results";
 import { CashToClose } from "@/components/dashboard/cash-to-close";
-import { useRouter } from "next/navigation";
-import { FileText } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { FileText, ArrowLeft } from "lucide-react";
 
 interface DSCRResults {
   noi: number;
@@ -79,6 +79,8 @@ const STATE_MAPPING = [
 
 export default function DSCRCalculator() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const applicationId = searchParams.get('applicationId');
   const [formData, setFormData] = useState({
     transactionType: "purchase",
     ficoScore: "740-759",
@@ -355,8 +357,16 @@ export default function DSCRCalculator() {
     // Store the data
     localStorage.setItem('dscrCalculatorData', JSON.stringify(dscrData));
     
-    // Navigate to dashboard with a query parameter to trigger the application form
-    router.push('/dashboard?showApplicationForm=true');
+    // If we have an applicationId, we're adding a loan to an existing application
+    if (applicationId) {
+      // Store the applicationId so we can tie the loan back to it
+      localStorage.setItem('targetApplicationId', applicationId);
+      // Navigate back to the application with a flag to add the loan
+      router.push(`/dashboard/applications/${applicationId}?addLoan=true`);
+    } else {
+      // Navigate to dashboard with a query parameter to trigger the application form
+      router.push('/dashboard?showApplicationForm=true');
+    }
   };
 
   useEffect(() => {
@@ -372,6 +382,33 @@ export default function DSCRCalculator() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
+        {/* Header for adding loan to application */}
+        {applicationId && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h2 className="text-lg font-semibold text-blue-800">
+                    Adding New Loan to Application
+                  </h2>
+                  <p className="text-sm text-blue-700">
+                    Use the DSCR calculator below to create a new loan for this application.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/dashboard/applications/${applicationId}`)}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Application
+              </Button>
+            </div>
+          </div>
+        )}
+        
         {/* Three Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
@@ -461,14 +498,14 @@ export default function DSCRCalculator() {
               selectedLoan={selectedLoan}
             />
 
-            {/* Create Application Button - Only show when a loan is selected */}
+            {/* Create Application/Add Loan Button - Only show when a loan is selected */}
             {selectedLoan && (
               <Button 
                 onClick={handleCreateApplication}
                 className="w-full bg-visto-gold hover:bg-visto-dark-gold text-white font-semibold py-3 flex items-center justify-center gap-2 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 <FileText className="h-4 w-4" />
-                Create Application
+                {applicationId ? 'Add Loan to Application' : 'Create Application'}
               </Button>
             )}
                 </div>

@@ -162,35 +162,28 @@ export interface BankStatement {
 export interface LoanApplication {
   id: string
   partner_id: string
-  
-  // Personal Info (Required)
   first_name: string
   last_name: string
   email?: string
   phone_number?: string
   ssn?: string
   date_of_birth?: string
-  
-  // Property Info
   property_address?: string
   property_is_tbd: boolean
   property_type?: string
   current_residence?: string
-  
-  // Simplified Loan Information
-  loan_objective?: LoanObjective
+  loan_objective?: string
   loan_type?: string
-  
-  // Income Information (for homeowner loans)
   total_income: number
   income_sources: IncomeSource[]
   income_documents: IncomeDocument[]
-  
-  // Assets Information
   total_assets: number
   bank_accounts: BankAccount[]
   bank_statements: BankStatement[]
-  
+  status: string
+  created_at: string
+  updated_at: string
+
   // DSCR Calculator Data
   dscr_data?: any
   estimated_home_value?: number
@@ -207,7 +200,7 @@ export interface LoanApplication {
   broker_ysp?: number
   selected_loan_product?: any
   dscr_results?: any
-  
+
   // Additional DSCR Fields
   fico_score_range?: string
   prepayment_penalty?: string
@@ -239,9 +232,91 @@ export interface LoanApplication {
   property_recording_fees?: number
   property_transfer_taxes?: number
   property_other_costs?: number
+}
+
+export interface Loan {
+  id: string
+  application_id: string
   
-  // Application status
-  status: LoanApplicationStatus
+  // Loan Basic Information
+  loan_name: string
+  loan_type: string
+  loan_objective: 'purchase' | 'refi' | 'cash_out_refi'
+  loan_status: 'pending' | 'pre_approved' | 'approved' | 'funded' | 'denied' | 'withdrawn'
+  
+  // Property Information
+  property_address?: string
+  property_type?: string
+  property_state?: string
+  property_zip_code?: string
+  property_city?: string
+  property_county?: string
+  property_occupancy?: string
+  property_use?: string
+  property_condition?: string
+  property_year_built?: number
+  property_square_footage?: number
+  property_bedrooms?: number
+  property_bathrooms?: number
+  property_lot_size?: number
+  property_zoning?: string
+  
+  // Financial Information
+  estimated_home_value?: number
+  purchase_price?: number
+  loan_amount?: number
+  down_payment_amount?: number
+  down_payment_percentage?: number
+  closing_costs?: number
+  seller_concessions?: number
+  repairs_improvements?: number
+  reserves?: number
+  
+  // Income & Cash Flow (for DSCR loans)
+  monthly_rental_income?: number
+  annual_property_insurance?: number
+  annual_property_taxes?: number
+  monthly_hoa_fee?: number
+  monthly_mortgage_payment?: number
+  noi?: number
+  dscr_ratio?: number
+  cash_flow?: number
+  
+  // Loan Terms
+  interest_rate?: number
+  loan_term_years?: number
+  prepayment_penalty?: string
+  discount_points?: number
+  
+  // Borrower Information
+  fico_score_range?: string
+  
+  // Broker Information
+  broker_points?: number
+  broker_admin_fee?: number
+  broker_ysp?: number
+  
+  // Lender Information
+  lender_name?: string
+  loan_product?: string
+  selected_loan_product?: any
+  
+  // Additional Costs
+  flood_insurance?: number
+  hazard_insurance?: number
+  title_insurance?: number
+  survey_fees?: number
+  recording_fees?: number
+  transfer_taxes?: number
+  other_costs?: number
+  
+  // Flags
+  is_short_term_rental?: boolean
+  escrow_accounts?: boolean
+  
+  // Additional Data
+  loan_data?: any
+  notes?: string
   
   // Timestamps
   created_at: string
@@ -249,35 +324,84 @@ export interface LoanApplication {
 }
 
 export interface LoanApplicationFormData {
-  // Personal Info
   first_name: string
   last_name: string
   email: string
   phone_number: string
-  
-  // Property Info
+  ssn: string
+  date_of_birth: string
   property_address: string
   property_is_tbd: boolean
   property_type: string
   current_residence: string
-  
-  // Simplified Loan Information
-  loan_objective: LoanObjective | ''
+  loan_objective: LoanObjective
   loan_type: string
-  
-  // Personal Details
-  ssn: string
-  date_of_birth: string
-  
-  // Income Information (for homeowner loans)
   total_income: number
   income_sources: IncomeSource[]
-  income_documents: File[]
-  
-  // Assets
+  income_documents: IncomeDocument[]
   total_assets: number
   bank_accounts: BankAccount[]
-  bank_statements: File[]
+  bank_statements: BankStatement[]
+}
+
+export interface LoanFormData {
+  loan_name: string
+  loan_type: string
+  loan_objective: 'purchase' | 'refi' | 'cash_out_refi'
+  property_address?: string
+  property_type?: string
+  property_state?: string
+  property_zip_code?: string
+  property_city?: string
+  property_county?: string
+  property_occupancy?: string
+  property_use?: string
+  property_condition?: string
+  property_year_built?: number
+  property_square_footage?: number
+  property_bedrooms?: number
+  property_bathrooms?: number
+  property_lot_size?: number
+  property_zoning?: string
+  estimated_home_value?: number
+  purchase_price?: number
+  loan_amount?: number
+  down_payment_amount?: number
+  down_payment_percentage?: number
+  closing_costs?: number
+  seller_concessions?: number
+  repairs_improvements?: number
+  reserves?: number
+  monthly_rental_income?: number
+  annual_property_insurance?: number
+  annual_property_taxes?: number
+  monthly_hoa_fee?: number
+  monthly_mortgage_payment?: number
+  noi?: number
+  dscr_ratio?: number
+  cash_flow?: number
+  interest_rate?: number
+  loan_term_years?: number
+  prepayment_penalty?: string
+  discount_points?: number
+  fico_score_range?: string
+  broker_points?: number
+  broker_admin_fee?: number
+  broker_ysp?: number
+  lender_name?: string
+  loan_product?: string
+  selected_loan_product?: any
+  flood_insurance?: number
+  hazard_insurance?: number
+  title_insurance?: number
+  survey_fees?: number
+  recording_fees?: number
+  transfer_taxes?: number
+  other_costs?: number
+  is_short_term_rental?: boolean
+  escrow_accounts?: boolean
+  loan_data?: any
+  notes?: string
 }
 
 export interface DashboardStats {
@@ -289,4 +413,8 @@ export interface DashboardStats {
   missing_conditions: number
   pending_documents: number
   total: number
+} 
+
+export interface ValidationErrors {
+  [key: string]: string
 } 
