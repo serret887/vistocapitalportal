@@ -259,9 +259,9 @@ export function calculatePricing(
   const productAdjustment = calculateProductAdjustment(matrix, product);
   const interestOnlyAdjustment = calculateInterestOnlyAdjustment(matrix, isInterestOnly);
   const programAdjustment = calculateProgramAdjustment(matrix, input.loanPurpose, input.propertyType, input.isShortTermRental);
-  const originationFeeAdjustment = calculateOriginationFeeAdjustment(matrix, input.brokerComp);
+  const originationFeeAdjustment = 0; //calculateOriginationFeeAdjustment(matrix, input.brokerComp);
   const loanSizeAdjustment = calculateLoanSizeAdjustment(matrix, input.loanAmount);
-  const yspAdjustment = calculateYSPAdjustment(matrix, input.brokerComp);
+  const yspAdjustment = calculateYSPAdjustment(matrix, input.ysp);
   const prepayAdjustment = calculatePrepayAdjustment(matrix, input.prepayStructure);
   const unitsAdjustment = input.units && input.units > 1 ? (matrix.rate_structure.program_adjustments.units_adjustment || 0.25) : 0;
 

@@ -72,7 +72,7 @@ export class PricingService {
                 loanPurpose: (input as any).transactionType === 'purchase' ? 'purchase' : 'refinance',
                 propertyType: input.propertyType,
                 isShortTermRental: (input as any).isShortTermRental || false,
-                brokerComp: (input as any).brokerPoints || 0,
+                brokerComp: (input as any).brokerComp || 0,
                 brokerAdminFee: (input as any).brokerAdminFee || 0,
                 prepayStructure: (input as any).prepaymentPenalty || '5/5/5/5/5',
                 units: (input as any).units || 1,

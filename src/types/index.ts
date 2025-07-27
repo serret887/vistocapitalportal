@@ -179,7 +179,7 @@ export interface LoanApplication {
   income_documents: IncomeDocument[]
   total_assets: number
   bank_accounts: BankAccount[]
-  bank_statements: BankStatement[]
+  bank_statements: (BankStatement | File)[]
   status: string
   created_at: string
   updated_at: string
@@ -341,7 +341,7 @@ export interface LoanApplicationFormData {
   income_documents: IncomeDocument[]
   total_assets: number
   bank_accounts: BankAccount[]
-  bank_statements: BankStatement[]
+  bank_statements: (BankStatement | File)[]
 }
 
 export interface LoanFormData {

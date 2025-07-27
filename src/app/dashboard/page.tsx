@@ -89,10 +89,7 @@ export default function DashboardPage() {
     router.push(`/dashboard/applications/${application.id}`)
   }
 
-  const handleEditApplication = (application: LoanApplication) => {
-    // Navigate to the edit application page
-    router.push(`/dashboard/applications/${application.id}/edit`)
-  }
+
 
   const handleDeleteApplication = async (application: LoanApplication) => {
     if (!confirm(`Are you sure you want to delete the application for ${application.first_name} ${application.last_name}?`)) {
@@ -252,7 +249,6 @@ export default function DashboardPage() {
           applications={applications}
           isLoading={isLoading}
           onViewApplication={handleViewApplication}
-          onEditApplication={handleEditApplication}
           onDeleteApplication={handleDeleteApplication}
           onExportData={handleExportData}
         />

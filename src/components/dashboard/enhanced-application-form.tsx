@@ -95,7 +95,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
       current_residence: '',
       
       // Loan Information
-      loan_objective: '' as LoanObjective | '',
+      loan_objective: 'purchase' as LoanObjective,
       loan_type: '',
       
       // Personal Details
@@ -1313,9 +1313,11 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
             {formData.bank_statements.map((file, index) => (
               <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
-                  <span className="text-sm visto-slate">{file.name}</span>
+                  <span className="text-sm visto-slate">
+                    {'name' in file ? file.name : file.file_name}
+                  </span>
                   <span className="text-xs text-gray-400 ml-2">
-                    ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                    ({'size' in file ? (file.size / 1024 / 1024).toFixed(1) : 'N/A'} MB)
                   </span>
                 </div>
                 <Button

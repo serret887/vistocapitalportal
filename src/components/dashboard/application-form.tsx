@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createLoanApplication } from '@/lib/loan-applications'
-import type { LoanApplicationFormData } from '@/types'
+import type { LoanApplicationFormData, LoanObjective } from '@/types'
 import { toast } from 'sonner'
 
 interface ApplicationFormProps {
@@ -30,7 +30,7 @@ export function ApplicationForm({ onSuccess, onCancel }: ApplicationFormProps) {
     current_residence: '',
     
     // Simplified Loan Information
-    loan_objective: '',
+    loan_objective: 'purchase' as LoanObjective,
     loan_type: '',
     
     // Personal Details

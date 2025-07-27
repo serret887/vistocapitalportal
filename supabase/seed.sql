@@ -225,7 +225,7 @@ VALUES (
           "dscr_lt_1_00_to_0_75_ltv_le_65": 0.500,
           "dscr_lt_1_00": "case-by-case"
         },
-        "rate_adjustment": 0
+        "rate_adjustment": 0.25
       },
       "minimum_rate": 6.625
     },

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { getLoanApplication } from '@/lib/loan-applications'
 import { EnhancedApplicationForm } from '@/components/dashboard/enhanced-application-form'
-import type { LoanApplication } from '@/types'
+import type { LoanApplication, LoanObjective } from '@/types'
 import { ArrowLeft, Edit, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -124,7 +124,18 @@ export default function EditApplicationPage() {
             <EnhancedApplicationForm
               onSuccess={handleEditSuccess}
               onCancel={handleEditCancel}
-              initialData={application}
+              initialData={{
+                ...application,
+                email: application.email || '',
+                phone_number: application.phone_number || '',
+                ssn: application.ssn || '',
+                date_of_birth: application.date_of_birth || '',
+                property_address: application.property_address || '',
+                property_type: application.property_type || '',
+                current_residence: application.current_residence || '',
+                loan_objective: (application.loan_objective as LoanObjective) || 'purchase',
+                loan_type: application.loan_type || ''
+              }}
               isEditing={true}
             />
           </CardContent>

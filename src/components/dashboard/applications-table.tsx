@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table'
 import type { LoanApplication, LoanApplicationStatus } from '@/types'
 import { LOAN_STATUS_LABELS, LOAN_STATUS_COLORS } from '@/types'
-import { CalendarIcon, Search, Filter, Download, Eye, Edit, Trash2, FileText } from 'lucide-react'
+import { CalendarIcon, Search, Filter, Download, Eye, Trash2, FileText } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import type { DateRange } from 'react-day-picker'
@@ -27,7 +27,6 @@ interface ApplicationsTableProps {
   applications: LoanApplication[]
   isLoading?: boolean
   onViewApplication?: (application: LoanApplication) => void
-  onEditApplication?: (application: LoanApplication) => void
   onDeleteApplication?: (application: LoanApplication) => void
   onExportData?: () => void
 }
@@ -36,7 +35,6 @@ export function ApplicationsTable({
   applications,
   isLoading = false,
   onViewApplication,
-  onEditApplication,
   onDeleteApplication,
   onExportData
 }: ApplicationsTableProps) {
@@ -351,9 +349,9 @@ export function ApplicationsTable({
                     
                     <TableCell>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                        LOAN_STATUS_COLORS[application.status]
+                        LOAN_STATUS_COLORS[application.status as keyof typeof LOAN_STATUS_COLORS]
                       }`}>
-                        {LOAN_STATUS_LABELS[application.status]}
+                        {LOAN_STATUS_LABELS[application.status as keyof typeof LOAN_STATUS_LABELS]}
                       </span>
                     </TableCell>
                     
@@ -406,16 +404,7 @@ export function ApplicationsTable({
                             <Eye className="h-4 w-4" />
                           </Button>
                         )}
-                        {onEditApplication && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onEditApplication(application)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
+
                         {onDeleteApplication && (
                           <Button
                             variant="ghost"

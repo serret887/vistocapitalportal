@@ -374,9 +374,9 @@ export default function ViewApplicationPage() {
           
           <div className="flex items-center gap-3">
             <Badge 
-              className={`${LOAN_STATUS_COLORS[application.status]} text-white`}
+              className={`${LOAN_STATUS_COLORS[application.status as keyof typeof LOAN_STATUS_COLORS]} text-white`}
             >
-              {LOAN_STATUS_LABELS[application.status]}
+              {LOAN_STATUS_LABELS[application.status as keyof typeof LOAN_STATUS_LABELS]}
             </Badge>
             
             {isEditing ? (
