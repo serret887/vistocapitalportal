@@ -4,7 +4,7 @@ import { createServerSupabaseClient, getCurrentUserFromRequest } from '@/lib/aut
 // GET /api/applications/[id]/loans - Get all loans for an application
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createServerSupabaseClient()
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const applicationId = params.id
+    const { id: applicationId } = await params
 
     // First verify the application belongs to the current user
     const { data: application, error: appError } = await supabase
@@ -60,7 +60,7 @@ export async function GET(
 // POST /api/applications/[id]/loans - Create a new loan for an application
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createServerSupabaseClient()
@@ -70,7 +70,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const applicationId = params.id
+    const { id: applicationId } = await params
     const loanData = await request.json()
 
     // First verify the application belongs to the current user

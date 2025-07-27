@@ -4,7 +4,7 @@ import { createServerSupabaseClient, getCurrentUserFromRequest } from '@/lib/aut
 // GET /api/applications/[id]/loans/[loanId] - Get a specific loan
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; loanId: string } }
+  { params }: { params: Promise<{ id: string; loanId: string }> }
 ) {
   try {
     const supabase = createServerSupabaseClient()
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: applicationId, loanId } = params
+    const { id: applicationId, loanId } = await params
 
     // First verify the application belongs to the current user
     const { data: application, error: appError } = await supabase
@@ -60,7 +60,7 @@ export async function GET(
 // PUT /api/applications/[id]/loans/[loanId] - Update a specific loan
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; loanId: string } }
+  { params }: { params: Promise<{ id: string; loanId: string }> }
 ) {
   try {
     const supabase = createServerSupabaseClient()
@@ -70,7 +70,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: applicationId, loanId } = params
+    const { id: applicationId, loanId } = await params
     const updateData = await request.json()
 
     // First verify the application belongs to the current user
@@ -118,7 +118,7 @@ export async function PUT(
 // DELETE /api/applications/[id]/loans/[loanId] - Delete a specific loan
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; loanId: string } }
+  { params }: { params: Promise<{ id: string; loanId: string }> }
 ) {
   try {
     const supabase = createServerSupabaseClient()
@@ -128,7 +128,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id: applicationId, loanId } = params
+    const { id: applicationId, loanId } = await params
 
     // First verify the application belongs to the current user
     const { data: application, error: appError } = await supabase

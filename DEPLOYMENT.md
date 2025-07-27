@@ -1,124 +1,130 @@
-# Deployment Guide
+# 🚀 Vercel Deployment Guide
 
 ## Prerequisites
 
-1. **Supabase Account**: Sign up at [supabase.com](https://supabase.com)
-2. **Vercel Account** (recommended) or any other hosting platform
-3. **Git Repository**: Push your code to GitHub, GitLab, or Bitbucket
+1. **Vercel Account**: Sign up at [vercel.com](https://vercel.com)
+2. **GitHub Repository**: Your code should be in a GitHub repository
+3. **Supabase Project**: Your Supabase project should be set up and running
 
-## Step 1: Set Up Supabase
+## Environment Variables
 
-1. **Create a new Supabase project**
-   - Go to [supabase.com](https://supabase.com)
+You'll need to configure these environment variables in your Vercel project:
+
+### Required Environment Variables
+
+```bash
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Next.js Configuration
+NODE_ENV=production
+```
+
+### How to Get Supabase Values
+
+1. Go to your Supabase project dashboard
+2. Navigate to Settings > API
+3. Copy the following values:
+   - **Project URL**: Use this for `NEXT_PUBLIC_SUPABASE_URL`
+   - **anon public**: Use this for `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - **service_role secret**: Use this for `SUPABASE_SERVICE_ROLE_KEY`
+
+## Deployment Steps
+
+### Option 1: Deploy via Vercel Dashboard
+
+1. **Connect Repository**:
+
+   - Go to [vercel.com/dashboard](https://vercel.com/dashboard)
    - Click "New Project"
-   - Choose your organization
-   - Enter project name (e.g., "partner-onboarding-portal")
-   - Set a database password
-   - Choose a region close to your users
-   - Click "Create new project"
+   - Import your GitHub repository
 
-2. **Run the database schema**
-   - In your Supabase dashboard, go to the SQL Editor
-   - Copy the contents of `supabase-schema.sql`
-   - Paste and run the SQL commands
-   - This creates the `partner_profiles` table
+2. **Configure Project**:
 
-3. **Get your API credentials**
-   - Go to Settings → API
-   - Copy the "Project URL" and "anon public" key
-   - You'll need these for environment variables
+   - Framework Preset: Next.js
+   - Root Directory: `./` (default)
+   - Build Command: `npm run build`
+   - Output Directory: `.next`
+   - Install Command: `npm install`
 
-## Step 2: Deploy to Vercel (Recommended)
+3. **Set Environment Variables**:
 
-1. **Connect your repository**
-   - Go to [vercel.com](https://vercel.com)
-   - Sign in with your Git provider
-   - Click "New Project"
-   - Import your repository
+   - In the project settings, go to "Environment Variables"
+   - Add all the required environment variables listed above
 
-2. **Configure environment variables**
-   - In the Vercel project settings, go to "Environment Variables"
-   - Add the following variables:
-     ```
-     NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-     NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-     ```
-
-3. **Deploy**
-   - Vercel will automatically detect Next.js
+4. **Deploy**:
    - Click "Deploy"
-   - Your app will be live in minutes
+   - Vercel will automatically build and deploy your application
 
-## Step 3: Alternative Deployment Options
+### Option 2: Deploy via Vercel CLI
 
-### Netlify
-1. Connect your repository to Netlify
-2. Set build command: `yarn build`
-3. Set publish directory: `.next`
-4. Add environment variables in Netlify dashboard
+1. **Install Vercel CLI**:
 
-### Railway
-1. Connect your repository to Railway
-2. Add environment variables
-3. Railway will automatically detect and deploy
+   ```bash
+   npm i -g vercel
+   ```
 
-### DigitalOcean App Platform
-1. Create a new app in DigitalOcean
-2. Connect your repository
-3. Set build command: `yarn build`
-4. Add environment variables
+2. **Login to Vercel**:
 
-## Step 4: Post-Deployment
+   ```bash
+   vercel login
+   ```
 
-1. **Test the application**
+3. **Deploy**:
+
+   ```bash
+   vercel
+   ```
+
+4. **Set Environment Variables**:
+   ```bash
+   vercel env add NEXT_PUBLIC_SUPABASE_URL
+   vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+   vercel env add SUPABASE_SERVICE_ROLE_KEY
+   ```
+
+## Post-Deployment
+
+1. **Test Your Application**:
+
    - Visit your deployed URL
-   - Complete the onboarding flow
-   - Verify data is saved to Supabase
+   - Test all major functionality
+   - Verify database connections
 
-2. **Set up custom domain** (optional)
-   - In Vercel/your hosting platform, add a custom domain
-   - Configure DNS records as instructed
+2. **Set Up Custom Domain** (Optional):
 
-3. **Monitor and maintain**
-   - Set up error monitoring (e.g., Sentry)
-   - Monitor Supabase usage and costs
-   - Set up backups if needed
+   - Go to your Vercel project settings
+   - Navigate to "Domains"
+   - Add your custom domain
 
-## Environment Variables Reference
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | Yes |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon/public key | Yes |
+3. **Monitor Performance**:
+   - Use Vercel Analytics to monitor performance
+   - Set up error tracking if needed
 
 ## Troubleshooting
 
-### Build Errors
-- Ensure all environment variables are set
-- Check that Supabase credentials are valid
-- Verify the database schema is created
+### Common Issues
 
-### Runtime Errors
-- Check browser console for client-side errors
-- Check Supabase logs for database errors
-- Verify RLS policies are configured correctly
+1. **Build Failures**:
 
-### Performance Issues
-- Enable Supabase connection pooling
-- Consider using Supabase Edge Functions for heavy operations
-- Optimize images and assets
+   - Check that all environment variables are set
+   - Verify your Supabase project is accessible
+   - Check the build logs for specific errors
 
-## Security Considerations
+2. **Database Connection Issues**:
 
-1. **Row Level Security (RLS)**: The current setup allows all operations. In production, implement proper RLS policies
-2. **Authentication**: Add user authentication before implementing proper user management
-3. **Rate Limiting**: Consider adding rate limiting for form submissions
-4. **Data Validation**: Add server-side validation for all form inputs
+   - Verify your Supabase URL and keys are correct
+   - Check that your Supabase project is not paused
+   - Ensure your database schema is properly set up
 
-## Next Steps
+3. **Authentication Issues**:
+   - Verify your Supabase authentication is configured
+   - Check that your redirect URLs are set correctly
 
-1. **Add Authentication**: Implement user registration/login
-2. **Email Notifications**: Set up email confirmations
-3. **Admin Dashboard**: Create an admin interface to manage partners
-4. **Analytics**: Add tracking and analytics
-5. **Testing**: Add unit and integration tests 
+### Support
+
+- **Vercel Documentation**: [vercel.com/docs](https://vercel.com/docs)
+- **Supabase Documentation**: [supabase.com/docs](https://supabase.com/docs)
+- **Next.js Documentation**: [nextjs.org/docs](https://nextjs.org/docs)
