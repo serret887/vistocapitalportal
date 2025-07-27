@@ -23,10 +23,24 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .single()
 
-    if (partnerError || !partnerProfile) {
+    if (partnerError) {
+      // If table doesn't exist or no profile found, user needs onboarding
+      if (partnerError.code === '42P01' || partnerError.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: 'Onboarding required', needsOnboarding: true },
+          { status: 403 }
+        )
+      }
       return NextResponse.json(
         { error: 'Partner profile not found' },
         { status: 404 }
+      )
+    }
+
+    if (!partnerProfile) {
+      return NextResponse.json(
+        { error: 'Onboarding required', needsOnboarding: true },
+        { status: 403 }
       )
     }
 

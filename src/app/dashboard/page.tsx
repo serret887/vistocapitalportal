@@ -42,6 +42,10 @@ export default function DashboardPage() {
       if (statsResult.error) {
         if (statsResult.error.includes('Authentication required')) {
           toast.error('Please log in to access the dashboard')
+        } else if (statsResult.error.includes('Onboarding required')) {
+          // User needs to complete onboarding, redirect them
+          router.push('/onboarding')
+          return
         } else {
           toast.error(`Failed to load dashboard stats: ${statsResult.error}`)
         }
@@ -53,6 +57,10 @@ export default function DashboardPage() {
       if (applicationsResult.error) {
         if (applicationsResult.error.includes('Authentication required')) {
           toast.error('Please log in to access applications')
+        } else if (applicationsResult.error.includes('Onboarding required')) {
+          // User needs to complete onboarding, redirect them
+          router.push('/onboarding')
+          return
         } else {
           toast.error(`Failed to load applications: ${applicationsResult.error}`)
         }

@@ -205,6 +205,18 @@ export async function getCurrentUser() {
       .single()
 
     if (profileError) {
+      // If no partner profile exists (user hasn't completed onboarding), 
+      // return user with basic info from auth
+      if (profileError.code === 'PGRST116') {
+        console.log('No partner profile found - user needs to complete onboarding')
+        const userData: User = {
+          id: user.id,
+          email: user.email || '',
+          firstName: user.user_metadata?.first_name || '',
+          lastName: user.user_metadata?.last_name || '',
+        }
+        return { user: userData, error: null }
+      }
       console.error('Error fetching partner profile:', profileError)
       return { user: null, error: profileError }
     }
@@ -235,6 +247,11 @@ export async function getPartnerProfile(userId: string) {
     if (error) {
       // If no partner profile exists, return null (not an error)
       if (error.code === 'PGRST116') {
+        return { profile: null, error: null }
+      }
+      // If table doesn't exist, also return null (not an error)
+      if (error.code === '42P01') {
+        console.log('partner_profiles table does not exist - user needs to complete onboarding')
         return { profile: null, error: null }
       }
       throw error
