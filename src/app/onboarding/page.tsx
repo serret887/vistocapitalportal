@@ -6,55 +6,13 @@ import { Step1PartnerType } from '@/components/steps/Step1PartnerType'
 import { Step2PhoneNumber } from '@/components/steps/Step2PhoneNumber'
 import { Step3BusinessInfo } from '@/components/steps/Step3BusinessInfo'
 import { Step4LicenseInfo } from '@/components/steps/Step4LicenseInfo'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import { OnboardingProvider } from '@/contexts/OnboardingContext'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
 function OnboardingContent() {
-  const { currentStep, formData, isLoading } = useOnboarding()
-  const router = useRouter()
-
-  const handleSubmit = async () => {
-    try {
-      if (!supabase) {
-        toast.error('Database connection not configured. Please check your environment variables.')
-        return
-      }
-
-      // Generate a placeholder user_id for now
-      const placeholderUserId = '00000000-0000-0000-0000-000000000000'
-      
-      const { error } = await supabase
-        .from('partner_profiles')
-        .insert({
-          user_id: placeholderUserId,
-          partner_type: formData.partner_type.toLowerCase().replace(' ', '_'),
-          phone_number: formData.phone_number,
-          monthly_deal_volume: formData.monthly_deal_volume,
-          transaction_volume: formData.transaction_volume,
-          transaction_types: formData.transaction_types,
-          license_number: formData.license_number || null,
-          license_state: formData.license_state || null,
-          onboarded: true
-        })
-
-      if (error) {
-        console.error('Error submitting form:', error)
-        toast.error('Failed to submit application. Please try again.')
-        return
-      }
-
-      toast.success('Application submitted successfully!')
-      router.push('/dashboard')
-    } catch (error) {
-      console.error('Error submitting form:', error)
-      toast.error('An unexpected error occurred. Please try again.')
-    }
-  }
+  const { currentStep, isLoading } = useOnboarding()
 
   const renderStep = () => {
     switch (currentStep) {

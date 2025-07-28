@@ -28,6 +28,9 @@ export interface PartnerProfile {
 }
 
 export interface OnboardingFormData {
+  first_name: string
+  last_name: string
+  email: string
   partner_type: string
   phone_number: string
   monthly_deal_volume: number

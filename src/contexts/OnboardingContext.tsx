@@ -23,6 +23,9 @@ const OnboardingContext = createContext<OnboardingContextType | undefined>(undef
 
 export function OnboardingProvider({ children }: { children: React.ReactNode }) {
   const [formData, setFormData] = useState<OnboardingFormData>({
+    first_name: '',
+    last_name: '',
+    email: '',
     partner_type: '',
     phone_number: '',
     monthly_deal_volume: 0,
@@ -56,6 +59,14 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
         console.log('User authenticated successfully:', currentUser.id)
         setUser(currentUser)
 
+        // Update form data with user information
+        setFormData(prev => ({
+          ...prev,
+          first_name: currentUser.firstName || '',
+          last_name: currentUser.lastName || '',
+          email: currentUser.email || '',
+        }))
+
         // Try to load existing partner profile
         const { profile, error: profileError } = await getPartnerProfile(currentUser.id)
         
@@ -68,7 +79,11 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
           }
           
           // Load existing partial profile data
-          setFormData({
+          setFormData(prev => ({
+            ...prev,
+            first_name: profile.first_name || currentUser.firstName || '',
+            last_name: profile.last_name || currentUser.lastName || '',
+            email: profile.email || currentUser.email || '',
             partner_type: profile.partner_type || '',
             phone_number: profile.phone_number || '',
             monthly_deal_volume: profile.monthly_deal_volume || 0,
@@ -76,7 +91,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
             transaction_types: profile.transaction_types || [],
             license_number: profile.license_number || '',
             license_state: profile.license_state || '',
-          })
+          }))
         } else {
           console.log('No existing profile found - starting fresh onboarding')
         }
@@ -121,6 +136,9 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       
       const profileData = {
         user_id: user.id,
+        first_name: user.firstName || '',
+        last_name: user.lastName || '',
+        email: user.email,
         partner_type: formData.partner_type.toLowerCase().replace(' ', '_'),
         phone_number: formData.phone_number,
         monthly_deal_volume: formData.monthly_deal_volume,
