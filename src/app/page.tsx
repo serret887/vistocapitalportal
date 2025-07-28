@@ -25,18 +25,18 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Link href="/signup">
+                <Link href="/signup">
               <Button size="lg" className="px-8 py-4 text-lg bg-visto-gold hover:bg-visto-dark-gold text-white">
                 Sign Up Free
                 <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
-            <Link href="/login">
+                  </Button>
+                </Link>
+                <Link href="/login">
               <Button variant="outline" size="lg" className="px-8 py-4 text-lg border-visto-gold text-visto-gold hover:bg-visto-gold hover:text-white">
-                Sign In
-              </Button>
-            </Link>
-          </div>
+                    Sign In
+                  </Button>
+                </Link>
+              </div>
           
           <div className="flex items-center justify-center gap-8 text-sm visto-slate">
             <div className="flex items-center gap-2">
@@ -145,8 +145,8 @@ export default function HomePage() {
               <CheckCircle className="w-4 h-4" />
               Instant access
             </div>
-          </div>
         </div>
+      </div>
       </main>
     </div>
   )

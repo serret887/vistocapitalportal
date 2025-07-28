@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     // Get partner profile
     const { data: partnerProfile, error: partnerError } = await serverSupabase
       .from('partner_profiles')
-      .select('id, first_name, last_name, email, phone_number, company_name')
+      .select('id, first_name, last_name, email, phone_number')
       .eq('user_id', user.id)
       .single()
 
