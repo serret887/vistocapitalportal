@@ -114,7 +114,7 @@ export function SignupForm({
           toast.success('Session established! Redirecting to onboarding...')
           // Small delay to ensure everything is ready
           setTimeout(() => {
-            router.push('/onboarding')
+        router.push('/onboarding')
           }, 1000)
         } else {
           toast.error('Session setup failed. Please try logging in manually.')

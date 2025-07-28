@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
 import { sendApplicationNotification } from '@/lib/slack-notifications'
+import { createDefaultConditions } from '@/lib/conditions'
 import type { LoanApplicationFormData } from '@/types'
 
 // GET /api/applications - Get all applications for the current partner
@@ -212,6 +213,15 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create application' },
         { status: 500 }
       )
+    }
+
+    // Create default conditions for the application
+    try {
+      const bankAccountsCount = formData.bank_accounts?.length || 0
+      await createDefaultConditions(application.id, bankAccountsCount)
+    } catch (conditionError) {
+      console.error('Failed to create conditions:', conditionError)
+      // Don't fail the request if condition creation fails
     }
 
     // Send Slack notification

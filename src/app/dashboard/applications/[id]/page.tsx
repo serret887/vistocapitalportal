@@ -11,7 +11,9 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { getLoanApplication, deleteLoanApplication, updateLoanApplication } from '@/lib/loan-applications'
 import { getLoans, createLoan, deleteLoan } from '@/lib/loans'
-import type { LoanApplication, Loan } from '@/types'
+import { getApplicationConditions } from '@/lib/conditions'
+import { ApplicationConditions } from '@/components/dashboard/application-conditions'
+import type { LoanApplication, Loan, ApplicationCondition } from '@/types'
 import { 
   ArrowLeft, 
   User, 
@@ -51,6 +53,8 @@ export default function ViewApplicationPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [loans, setLoans] = useState<Loan[]>([])
   const [isLoadingLoans, setIsLoadingLoans] = useState(false)
+  const [conditions, setConditions] = useState<(ApplicationCondition & { activities: any[] })[]>([])
+  const [isLoadingConditions, setIsLoadingConditions] = useState(true)
 
   const applicationId = params.id as string
 
@@ -123,9 +127,30 @@ export default function ViewApplicationPage() {
       }
     }
 
+    const loadConditions = async () => {
+      if (!applicationId) return
+
+      setIsLoadingConditions(true)
+      try {
+        const { conditions: conditionsData, error } = await getApplicationConditions(applicationId)
+        
+        if (error) {
+          console.error('Error loading conditions:', error)
+          // Don't show error toast for conditions, just log it
+        } else {
+          setConditions(conditionsData)
+        }
+      } catch (error) {
+        console.error('Error loading conditions:', error)
+      } finally {
+        setIsLoadingConditions(false)
+      }
+    }
+
     loadApplication()
     loadLoans()
-  }, [applicationId, router])
+    loadConditions()
+  }, [applicationId])
 
   // Handle returning from DSCR calculator with loan data
   useEffect(() => {
@@ -1084,6 +1109,38 @@ export default function ViewApplicationPage() {
                     </div>
                   ))}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Application Conditions */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-visto-gold" />
+                <CardTitle className="text-xl font-semibold visto-dark-blue">
+                  Application Conditions
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingConditions ? (
+                <div className="text-center py-8">
+                  <div className="w-6 h-6 border-2 border-visto-gold border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-sm visto-slate">Loading conditions...</p>
+                </div>
+              ) : conditions.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-lg font-medium visto-slate mb-2">No conditions yet</p>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Conditions will appear here once they are added to this application.
+                  </p>
+                </div>
+              ) : (
+                <ApplicationConditions conditions={conditions} applicationId={applicationId} />
               )}
             </CardContent>
           </Card>

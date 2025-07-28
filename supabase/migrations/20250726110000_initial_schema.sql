@@ -583,6 +583,8 @@ CREATE TRIGGER update_loans_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_loans_updated_at();
 
+-- Conditions system moved to separate migration: 20250728000000_add_conditions_system.sql
+
 -- =====================================================
 -- SCHEMA COMPLETE
 -- ===================================================== 

@@ -418,6 +418,45 @@ export interface DashboardStats {
   total: number
 } 
 
+// Condition Types
+export type ConditionStatus = 'pending' | 'in_progress' | 'completed' | 'revision_requested'
+export type ConditionType = 'credit_authorization' | 'bank_statements' | 'insurance' | 'application_fee'
+
+export const CONDITION_STATUS_LABELS: Record<ConditionStatus, string> = {
+  'pending': 'Pending',
+  'in_progress': 'In Progress',
+  'completed': 'Completed',
+  'revision_requested': 'Revision Requested'
+}
+
+export const CONDITION_STATUS_COLORS: Record<ConditionStatus, string> = {
+  'pending': 'bg-gray-50 text-gray-700 border-gray-200',
+  'in_progress': 'bg-blue-50 text-blue-800 border-blue-200',
+  'completed': 'bg-green-50 text-green-800 border-green-200',
+  'revision_requested': 'bg-yellow-50 text-yellow-800 border-yellow-200'
+}
+
+export interface ApplicationCondition {
+  id: string
+  application_id: string
+  title: string
+  description: string
+  status: ConditionStatus
+  condition_type: ConditionType
+  fee_amount?: number
+  due_date?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ConditionActivity {
+  id: string
+  condition_id: string
+  activity_type: string
+  message: string
+  created_at: string
+}
+
 export interface ValidationErrors {
   [key: string]: string
 } 
