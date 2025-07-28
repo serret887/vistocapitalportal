@@ -66,8 +66,8 @@ export class PricingService {
                 fico: (input as any).ficoScore === '780+' ? 780 : parseInt((input as any).ficoScore?.split('-')[0] || '740'),
                 // Calculate LTV
                 ltv: (input.loanAmount / input.estimatedHomeValue) * 100,
-                // Calculate DSCR (will be recalculated in pricing)
-                dscr: 1.25, // Default, will be calculated properly in pricing
+                // Use the actual DSCR value from the input (calculated by frontend)
+                dscr: input.dscr,
                 // Ensure all required fields are present
                 loanPurpose: (input as any).transactionType === 'purchase' ? 'purchase' : 'refinance',
                 propertyType: input.propertyType,

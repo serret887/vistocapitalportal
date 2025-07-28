@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, getCurrentUserFromRequest } from '@/lib/auth'
-import { sendLoanNotification } from '@/lib/slack-notifications'
+// import { sendLoanNotification } from '@/lib/slack-notifications'
 
 // GET /api/applications/[id]/loans - Get all loans for an application
 export async function GET(
@@ -113,7 +113,7 @@ export async function POST(
 
     // Send Slack notification
     try {
-      await sendLoanNotification(loan, application, partnerProfile)
+      // await sendLoanNotification(loan, application, partnerProfile)
     } catch (notificationError) {
       console.error('Failed to send Slack notification:', notificationError)
       // Don't fail the request if notification fails

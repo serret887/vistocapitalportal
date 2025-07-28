@@ -71,9 +71,9 @@ function calculateInitialDSCREstimate(formData: FormData): number {
   // Net Operating Income
   const noi = annualRentalIncome - annualOperatingExpenses;
   
-  // Use a conservative base rate estimate for initial DSCR calculation
-  // This will be refined iteratively in the pricing calculation
-  const conservativeRate = 0.075; // 7.5% - slightly higher than typical base rates
+  // Use a more conservative rate estimate for initial DSCR calculation
+  // This should be higher than typical rates to ensure we catch loans that will fail validation
+  const conservativeRate = 0.085; // 8.5% - much higher than typical rates to be conservative
   const monthlyRate = conservativeRate / 12;
   const termYears = 30;
   const numPayments = termYears * 12;
@@ -98,9 +98,9 @@ function calculateInitialDSCREstimate(formData: FormData): number {
     },
     noi,
     conservativeRate,
-    estimatedMonthlyPayment: monthlyPayment,
+    monthlyPayment,
     annualDebtService,
-    initialDSCREstimate: dscr
+    initialDSCR: dscr
   });
   
   return dscr;
