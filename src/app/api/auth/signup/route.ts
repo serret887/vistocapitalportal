@@ -42,6 +42,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Create partner profile with onboarded = false
+    const { error: profileError } = await supabase
+      .from('partner_profiles')
+      .insert([{
+        user_id: data.user.id,
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        onboarded: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }])
+
+    if (profileError) {
+      console.error('Error creating partner profile:', profileError)
+      // Don't fail the signup if profile creation fails
+      // The user can still sign in and complete onboarding later
+    }
+
     // Return user data (client will need to sign in separately)
     return NextResponse.json({
       user: {

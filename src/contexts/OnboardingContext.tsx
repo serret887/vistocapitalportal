@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { OnboardingFormData } from '@/types'
-import { supabase } from '@/lib/supabase'
 import { getCurrentUser, getPartnerProfile } from '@/lib/auth-client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
@@ -105,7 +104,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }
 
     loadUserAndProfile()
-  }, [router])
+  }, [router]) // Add router as dependency
 
   const updateFormData = (data: Partial<OnboardingFormData>) => {
     setFormData(prev => ({ ...prev, ...data }))
@@ -131,48 +130,34 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
     setIsLoading(true)
     try {
-      // Check if partner profile already exists
-      const { profile: existingProfile } = await getPartnerProfile(user.id)
-      
-      const profileData = {
-        user_id: user.id,
+      // Prepare onboarding data
+      const onboardingData = {
         first_name: user.firstName || '',
         last_name: user.lastName || '',
-        email: user.email,
-        partner_type: formData.partner_type.toLowerCase().replace(' ', '_'),
+        partner_type: formData.partner_type,
         phone_number: formData.phone_number,
         monthly_deal_volume: formData.monthly_deal_volume,
         transaction_volume: formData.transaction_volume,
         transaction_types: formData.transaction_types,
         license_number: formData.license_number || null,
         license_state: formData.license_state || null,
-        onboarded: true,
-        updated_at: new Date().toISOString(),
       }
 
-      let error
+      // Call the onboarding API endpoint
+      const response = await fetch('/api/auth/onboarding', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: JSON.stringify(onboardingData),
+      })
 
-      if (existingProfile) {
-        // Update existing profile
-        const { error: updateError } = await supabase
-          .from('partner_profiles')
-          .update(profileData)
-          .eq('user_id', user.id)
-        error = updateError
-      } else {
-        // Create new profile
-        const { error: insertError } = await supabase
-          .from('partner_profiles')
-          .insert([{
-            ...profileData,
-            created_at: new Date().toISOString(),
-          }])
-        error = insertError
-      }
+      const result = await response.json()
 
-      if (error) {
-        console.error('Error saving partner profile:', error)
-        toast.error('Failed to save partner profile. Please try again.')
+      if (!response.ok) {
+        console.error('Error saving partner profile:', result.error)
+        toast.error(result.error || 'Failed to save partner profile. Please try again.')
         return
       }
 

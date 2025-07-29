@@ -55,6 +55,34 @@ async function verifyToken(token: string) {
   }
 }
 
+// Check if user has completed onboarding
+async function checkOnboardingStatus(userId: string): Promise<{ onboarded: boolean; error?: string }> {
+  try {
+    const serverSupabase = createServerSupabaseClient()
+    
+    // Get partner profile
+    const { data: partnerProfile, error } = await serverSupabase
+      .from('partner_profiles')
+      .select('onboarded')
+      .eq('user_id', userId)
+      .single()
+
+    if (error) {
+      // If no profile found, user hasn't completed onboarding
+      if (error.code === 'PGRST116') {
+        return { onboarded: false }
+      }
+      console.error('Error checking onboarding status:', error)
+      return { onboarded: false, error: 'Failed to check onboarding status' }
+    }
+
+    return { onboarded: partnerProfile?.onboarded || false }
+  } catch (error) {
+    console.error('Error checking onboarding status:', error)
+    return { onboarded: false, error: 'Failed to check onboarding status' }
+  }
+}
+
 // Add security headers
 function addSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set('X-Content-Type-Options', 'nosniff')
@@ -74,10 +102,16 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 export async function middleware(request: NextRequest) {
   const startTime = Date.now()
   const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-
-  // Log request in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[Middleware] ${requestId}: ${request.method} ${request.nextUrl.pathname}`)
+  
+  console.log(`[Middleware] ${requestId}: ${request.method} ${request.nextUrl.pathname}`)
+  
+  // Add security headers to all responses
+  const addSecurityHeaders = (response: NextResponse) => {
+    response.headers.set('X-Frame-Options', 'DENY')
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+    return response
   }
 
   // Handle CORS preflight requests
@@ -118,37 +152,78 @@ export async function middleware(request: NextRequest) {
       return addSecurityHeaders(response)
     }
 
-    // Get authorization header
+    // Check authentication for protected routes
     const authHeader = request.headers.get('authorization')
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      const response = NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-      return addSecurityHeaders(response)
+      console.log(`[Middleware] ${requestId}: No auth header`)
+      if (request.nextUrl.pathname.startsWith('/api/')) {
+        const response = NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        )
+        return addSecurityHeaders(response)
+      } else {
+        const response = NextResponse.redirect(new URL('/login', request.url))
+        return addSecurityHeaders(response)
+      }
     }
 
     const token = authHeader.replace('Bearer ', '')
     
-    // Basic token validation
-    if (token.length < 10) {
-      const response = NextResponse.json(
-        { error: 'Invalid token format' },
-        { status: 401 }
-      )
-      return addSecurityHeaders(response)
-    }
+    // Create server-side client
+    const serverSupabase = createServerSupabaseClient()
     
-    // Verify the token
-    const { user, error } = await verifyToken(token)
+    // Verify the token and get user
+    const authStart = Date.now()
+    const { data: { user }, error } = await serverSupabase.auth.getUser(token)
+    const authTime = Date.now() - authStart
     
     if (error || !user) {
-      const response = NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      )
-      return addSecurityHeaders(response)
+      console.log(`[Middleware] ${requestId}: Auth failed in ${authTime}ms`)
+      if (request.nextUrl.pathname.startsWith('/api/')) {
+        const response = NextResponse.json(
+          { error: 'Invalid or expired token' },
+          { status: 401 }
+        )
+        return addSecurityHeaders(response)
+      } else {
+        const response = NextResponse.redirect(new URL('/login', request.url))
+        return addSecurityHeaders(response)
+      }
+    }
+
+    console.log(`[Middleware] ${requestId}: Authenticated successfully in ${authTime}ms`)
+
+    // Check onboarding status for protected routes that require onboarding
+    const onboardingRequiredRoutes = [
+      '/api/dashboard',
+      '/api/applications',
+      '/api/files'
+    ]
+    
+    const requiresOnboarding = onboardingRequiredRoutes.some(route => 
+      request.nextUrl.pathname.startsWith(route)
+    )
+
+    if (requiresOnboarding) {
+      const { onboarded, error: onboardingError } = await checkOnboardingStatus(user.id)
+      
+      if (onboardingError) {
+        const response = NextResponse.json(
+          { error: onboardingError },
+          { status: 500 }
+        )
+        return addSecurityHeaders(response)
+      }
+
+      if (!onboarded) {
+        const response = NextResponse.json(
+          { error: 'Onboarding required', needsOnboarding: true },
+          { status: 403 }
+        )
+        return addSecurityHeaders(response)
+      }
     }
 
     // Add user information to request headers for API routes to use
@@ -157,19 +232,18 @@ export async function middleware(request: NextRequest) {
     requestHeaders.set('x-user-email', user.email || '')
     requestHeaders.set('x-request-id', requestId)
 
-    // Return the request with user information added
-    const response = NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    })
-
-    // Log successful authentication
-    if (process.env.NODE_ENV === 'development') {
-      const duration = Date.now() - startTime
-      console.log(`[Middleware] ${requestId}: Authenticated successfully in ${duration}ms`)
+    // Continue to the next middleware or the final handler
+    const response = NextResponse.next()
+    
+    // Add user info to headers for API routes
+    if (request.nextUrl.pathname.startsWith('/api/')) {
+      response.headers.set('x-user-id', user.id)
+      response.headers.set('x-user-email', user.email || '')
     }
-
+    
+    const totalTime = Date.now() - startTime
+    console.log(`[Middleware] ${requestId}: Completed in ${totalTime}ms`)
+    
     return addSecurityHeaders(response)
 
   } catch (error) {

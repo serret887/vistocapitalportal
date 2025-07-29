@@ -129,20 +129,4 @@ export async function getPartnerProfile(userId: string) {
   }
 }
 
-// Check if user has completed onboarding
-export async function hasCompletedOnboarding(userId: string) {
-  try {
-    const response = await apiClient.get<{ completed?: boolean }>(`/auth/onboarding-status/${userId}`)
-    
-    if (response.error) {
-      return { completed: false, error: new Error(response.error) }
-    }
-
-    return { completed: response.data?.completed || false, error: null }
-  } catch (error) {
-    console.error('Error checking onboarding status:', error)
-    return { completed: false, error: error as Error }
-  }
-}
-
  

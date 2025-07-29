@@ -120,25 +120,13 @@ CREATE POLICY "Users can insert their own partner profile" ON partner_profiles
 CREATE POLICY "Users can update their own partner profile" ON partner_profiles
   FOR UPDATE USING (auth.uid() = user_id);
 
--- Function to automatically create partner_profile when user signs up
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
-BEGIN
-  INSERT INTO public.partner_profiles (user_id, first_name, last_name, email)
-  VALUES (
-    new.id,
-    COALESCE(new.raw_user_meta_data->>'first_name', ''),
-    COALESCE(new.raw_user_meta_data->>'last_name', ''),
-    new.email
-  );
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- Allow service role to insert partner profiles (for middleware)
+CREATE POLICY "Service role can insert partner profiles" ON partner_profiles
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
 
--- Trigger to automatically create partner_profile on signup
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+-- Allow service role to update partner profiles (for middleware)
+CREATE POLICY "Service role can update partner profiles" ON partner_profiles
+  FOR UPDATE USING (auth.role() = 'service_role');
 
 -- =====================================================
 -- LOAN APPLICATIONS - COMPLETE SCHEMA

@@ -1,16 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { StatusCards } from '@/components/dashboard/status-cards'
-import { EnhancedApplicationForm } from '@/components/dashboard/enhanced-application-form'
-import { ApplicationsTable } from '@/components/dashboard/applications-table'
-import { getDashboardStats, getLoanApplications, deleteLoanApplication } from '@/lib/loan-applications'
-import type { DashboardStats, LoanApplicationStatus, LoanApplication } from '@/types'
-import { Plus, Users, TrendingUp, DollarSign, FileText } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { ApplicationsTable } from '@/components/dashboard/applications-table'
+import { ApplicationForm } from '@/components/dashboard/application-form'
+import { getDashboardStats, getLoanApplications, deleteLoanApplication } from '@/lib/loan-applications'
+import type { DashboardStats, LoanApplication, LoanApplicationStatus } from '@/types'
+import { Plus, Users, TrendingUp, DollarSign, FileText } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,7 +30,7 @@ export default function DashboardPage() {
     }
   }, [searchParams])
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     setIsLoading(true)
     try {
       // Load both stats and applications
@@ -42,6 +42,8 @@ export default function DashboardPage() {
       if (statsResult.error) {
         if (statsResult.error.includes('Authentication required')) {
           toast.error('Please log in to access the dashboard')
+          router.push('/login')
+          return
         } else if (statsResult.error.includes('Onboarding required')) {
           // User needs to complete onboarding, redirect them
           router.push('/onboarding')
@@ -57,6 +59,8 @@ export default function DashboardPage() {
       if (applicationsResult.error) {
         if (applicationsResult.error.includes('Authentication required')) {
           toast.error('Please log in to access applications')
+          router.push('/login')
+          return
         } else if (applicationsResult.error.includes('Onboarding required')) {
           // User needs to complete onboarding, redirect them
           router.push('/onboarding')
@@ -74,32 +78,30 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [router])
 
   useEffect(() => {
     loadDashboardData()
-  }, [])
+  }, [loadDashboardData])
 
-  const handleStatusClick = (status: LoanApplicationStatus) => {
+  const handleStatusClick = useCallback((status: LoanApplicationStatus) => {
     // Future: Navigate to filtered view of applications by status
     console.log(`Clicked on ${status} status`)
     toast.info(`Viewing ${status} applications - Coming soon!`)
-  }
+  }, [])
 
-  const handleApplicationSuccess = () => {
+  const handleApplicationSuccess = useCallback(() => {
     setShowApplicationForm(false)
     loadDashboardData() // Refresh data after new application
     toast.success('Application created successfully!')
-  }
+  }, [loadDashboardData])
 
-  const handleViewApplication = (application: LoanApplication) => {
+  const handleViewApplication = useCallback((application: LoanApplication) => {
     // Navigate to the view application page
     router.push(`/dashboard/applications/${application.id}`)
-  }
+  }, [router])
 
-
-
-  const handleDeleteApplication = async (application: LoanApplication) => {
+  const handleDeleteApplication = useCallback(async (application: LoanApplication) => {
     if (!confirm(`Are you sure you want to delete the application for ${application.first_name} ${application.last_name}?`)) {
       return
     }
@@ -118,9 +120,9 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Error deleting application:', error)
-      toast.error('An unexpected error occurred')
+      toast.error('Failed to delete application')
     }
-  }
+  }, [loadDashboardData])
 
   const handleExportData = () => {
     // Future: Export applications to CSV/Excel
@@ -142,7 +144,7 @@ export default function DashboardPage() {
   if (showApplicationForm) {
     return (
       <div className="container mx-auto p-6">
-        <EnhancedApplicationForm
+        <ApplicationForm
           onSuccess={handleApplicationSuccess}
           onCancel={() => setShowApplicationForm(false)}
         />
@@ -247,7 +249,7 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-semibold visto-dark-blue tracking-tight mb-6">
             Application Status Overview
           </h2>
-          <StatusCards stats={stats} onStatusClick={handleStatusClick} />
+          {/* StatusCards component was removed, so this section is now empty */}
         </div>
       )}
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getCurrentUser, hasCompletedOnboarding } from '@/lib/auth-client'
+import { getCurrentUser } from '@/lib/auth-client'
 import { toast } from 'sonner'
 
 interface ProtectedRouteProps {
@@ -27,23 +27,8 @@ export function ProtectedRoute({ children, requireOnboarding = false }: Protecte
           return
         }
 
-        // If onboarding is required, check completion status
-        if (requireOnboarding) {
-          const { completed, error: onboardingError } = await hasCompletedOnboarding(user.id)
-          
-          if (onboardingError) {
-            toast.error('Failed to check onboarding status')
-            router.push('/login')
-            return
-          }
-
-          if (!completed) {
-            toast.error('Please complete your onboarding first')
-            router.push('/onboarding')
-            return
-          }
-        }
-
+        // Onboarding checks are now handled by the middleware
+        // If we reach here, the user is authenticated and can access the route
         setIsAuthorized(true)
       } catch (error) {
         console.error('Auth check error:', error)
@@ -55,7 +40,7 @@ export function ProtectedRoute({ children, requireOnboarding = false }: Protecte
     }
 
     checkAuth()
-  }, [router, requireOnboarding])
+  }, [router])
 
   if (isLoading) {
     return (

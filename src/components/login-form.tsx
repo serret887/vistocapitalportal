@@ -73,14 +73,8 @@ export function LoginForm({
       if (user) {
         toast.success('Signed in successfully!')
         
-        // Check if user has completed onboarding
-        const { completed } = await hasCompletedOnboarding(user.id)
-        
-        if (completed) {
-          router.push('/dashboard')
-        } else {
-          router.push('/onboarding')
-        }
+        // Always redirect to dashboard - middleware will handle onboarding redirects
+        router.push('/dashboard')
       }
     } catch (error) {
       console.error('Login error:', error)
