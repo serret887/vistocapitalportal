@@ -8,18 +8,18 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 function checkRateLimit(identifier: string): boolean {
   const now = Date.now()
   const windowStart = now - (60 * 1000) // 1 minute window
-  
+
   const current = rateLimitMap.get(identifier)
-  
+
   if (!current || current.resetTime < now) {
     rateLimitMap.set(identifier, { count: 1, resetTime: now + (60 * 1000) })
     return true
   }
-  
+
   if (current.count >= 100) { // 100 requests per minute
     return false
   }
-  
+
   current.count++
   return true
 }
@@ -37,14 +37,14 @@ async function verifyToken(token: string) {
 
     const serverSupabase = createServerSupabaseClient()
     const { data: { user }, error } = await serverSupabase.auth.getUser(token)
-    
+
     if (error || !user) {
       return { user: null, error: error || new Error('Invalid token') }
     }
 
     // Cache the result for 5 minutes
-    tokenCache.set(token, { 
-      user, 
+    tokenCache.set(token, {
+      user,
       expires: Date.now() + (5 * 60 * 1000) // 5 minutes
     })
 
@@ -59,7 +59,7 @@ async function verifyToken(token: string) {
 async function checkOnboardingStatus(userId: string): Promise<{ onboarded: boolean; error?: string }> {
   try {
     const serverSupabase = createServerSupabaseClient()
-    
+
     // Get partner profile
     const { data: partnerProfile, error } = await serverSupabase
       .from('partner_profiles')
@@ -90,21 +90,21 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-  
+
   // Add CORS headers for API routes
   response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_FRONTEND_URL || '*')
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  
+
   return response
 }
 
 export async function middleware(request: NextRequest) {
   const startTime = Date.now()
   const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  
+
   console.log(`[Middleware] ${requestId}: ${request.method} ${request.nextUrl.pathname}`)
-  
+
   // Add security headers to all responses
   const addSecurityHeaders = (response: NextResponse) => {
     response.headers.set('X-Frame-Options', 'DENY')
@@ -133,9 +133,8 @@ export async function middleware(request: NextRequest) {
     '/api/auth/signup',
     '/api/auth/signin',
     '/api/auth/login',
-    '/api/loan-pricing' // Loan pricing is public for demo purposes
   ]
-  
+
   if (publicEndpoints.some(endpoint => request.nextUrl.pathname.startsWith(endpoint))) {
     const response = NextResponse.next()
     return addSecurityHeaders(response)
@@ -154,7 +153,7 @@ export async function middleware(request: NextRequest) {
 
     // Check authentication for protected routes
     const authHeader = request.headers.get('authorization')
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.log(`[Middleware] ${requestId}: No auth header`)
       if (request.nextUrl.pathname.startsWith('/api/')) {
@@ -170,15 +169,12 @@ export async function middleware(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    
-    // Create server-side client
-    const serverSupabase = createServerSupabaseClient()
-    
-    // Verify the token and get user
+
+    // Verify the token and get user with caching
     const authStart = Date.now()
-    const { data: { user }, error } = await serverSupabase.auth.getUser(token)
+    const { user, error } = await verifyToken(token)
     const authTime = Date.now() - authStart
-    
+
     if (error || !user) {
       console.log(`[Middleware] ${requestId}: Auth failed in ${authTime}ms`)
       if (request.nextUrl.pathname.startsWith('/api/')) {
@@ -201,14 +197,14 @@ export async function middleware(request: NextRequest) {
       '/api/applications',
       '/api/files'
     ]
-    
-    const requiresOnboarding = onboardingRequiredRoutes.some(route => 
+
+    const requiresOnboarding = onboardingRequiredRoutes.some(route =>
       request.nextUrl.pathname.startsWith(route)
     )
 
     if (requiresOnboarding) {
       const { onboarded, error: onboardingError } = await checkOnboardingStatus(user.id)
-      
+
       if (onboardingError) {
         const response = NextResponse.json(
           { error: onboardingError },
@@ -234,16 +230,16 @@ export async function middleware(request: NextRequest) {
 
     // Continue to the next middleware or the final handler
     const response = NextResponse.next()
-    
+
     // Add user info to headers for API routes
     if (request.nextUrl.pathname.startsWith('/api/')) {
       response.headers.set('x-user-id', user.id)
       response.headers.set('x-user-email', user.email || '')
     }
-    
+
     const totalTime = Date.now() - startTime
     console.log(`[Middleware] ${requestId}: Completed in ${totalTime}ms`)
-    
+
     return addSecurityHeaders(response)
 
   } catch (error) {
@@ -263,5 +259,4 @@ export const config = {
      */
     '/api/:path*',
   ],
-} 
- 
+}
