@@ -43,6 +43,7 @@ CREATE TABLE partner_profiles (
   last_name TEXT NOT NULL,
   email TEXT NOT NULL,
   partner_type TEXT CHECK (partner_type IN ('wholesaler', 'investor', 'real_estate_agent', 'marketing_partner')),
+  onboarded BOOLEAN DEFAULT FALSE,
   phone_number TEXT,
   monthly_deal_volume INTEGER,
   transaction_volume NUMERIC,
