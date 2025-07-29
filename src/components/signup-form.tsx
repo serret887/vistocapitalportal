@@ -9,7 +9,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { signUp, getCurrentUser } from "@/lib/auth"
+import { signUp, getCurrentUser } from "@/lib/auth-client"
 import { toast } from "sonner"
 
 export function SignupForm({

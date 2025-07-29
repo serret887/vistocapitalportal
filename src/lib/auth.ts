@@ -1,18 +1,5 @@
-import { supabase } from './supabase'
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
-
-export interface SignupData {
-  email: string
-  password: string
-  firstName: string
-  lastName: string
-}
-
-export interface LoginData {
-  email: string
-  password: string
-}
 
 export interface User {
   id: string
@@ -80,202 +67,59 @@ export async function getCurrentUserFromRequest(request: NextRequest) {
   }
 }
 
-// Sign up a new user
-export async function signUp({ email, password, firstName, lastName }: SignupData) {
+// Helper function to get user from request headers (set by middleware)
+export function getUserFromRequestHeaders(request: NextRequest) {
+  const userId = request.headers.get('x-user-id')
+  const userEmail = request.headers.get('x-user-email')
+  
+  if (!userId) {
+    return { user: null, error: new Error('No user ID in request headers') }
+  }
+
+  // Create a minimal user object with the information we have
+  const user = {
+    id: userId,
+    email: userEmail || '',
+    // Add other user properties as needed
+  }
+
+  return { user, error: null }
+}
+
+// Updated function to get authenticated user from API request (uses middleware headers)
+export async function getAuthenticatedUser(request: NextRequest) {
   try {
-    if (!supabase) {
-      throw new Error('Supabase client not initialized. Check environment variables.')
+    // First try to get user from middleware headers (more efficient)
+    const { user: headerUser, error: headerError } = getUserFromRequestHeaders(request)
+    
+    if (headerUser && !headerError) {
+      return { user: headerUser, error: null }
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-        },
-      },
-    })
-
-    if (error) {
-      throw error
+    // Fallback to token verification if headers are not available
+    const authHeader = request.headers.get('authorization')
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { user: null, error: new Error('No authorization header') }
     }
 
-    return { user: data.user, error: null }
+    const token = authHeader.replace('Bearer ', '')
+    
+    // Create server-side client
+    const serverSupabase = createServerSupabaseClient()
+    
+    // Verify the token and get user
+    const { data: { user }, error } = await serverSupabase.auth.getUser(token)
+    
+    if (error || !user) {
+      return { user: null, error: error || new Error('Invalid token') }
+    }
+
+    return { user: user, error: null }
   } catch (error) {
-    console.error('Error signing up:', error)
+    console.error('Error getting authenticated user:', error)
     return { user: null, error: error as Error }
   }
 }
 
-// Sign in an existing user
-export async function signIn({ email, password }: LoginData) {
-  try {
-    if (!supabase) {
-      throw new Error('Supabase client not initialized. Check environment variables.')
-    }
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      throw error
-    }
-
-    return { user: data.user, error: null }
-  } catch (error) {
-    console.error('Error signing in:', error)
-    return { user: null, error: error as Error }
-  }
-}
-
-// Sign out the current user
-export async function signOut() {
-  try {
-    if (!supabase) {
-      throw new Error('Supabase client not initialized. Check environment variables.')
-    }
-
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      throw error
-    }
-    return { error: null }
-  } catch (error) {
-    console.error('Error signing out:', error)
-    return { error: error as Error }
-  }
-}
-
-// Refresh the user session
-export async function refreshSession() {
-  try {
-    const { data: { session }, error } = await supabase.auth.refreshSession()
-    if (error) {
-      console.error('Error refreshing session:', error)
-      return { session: null, error }
-    }
-    return { session, error: null }
-  } catch (error) {
-    console.error('Error refreshing session:', error)
-    return { session: null, error: error as Error }
-  }
-}
-
-// Get the current user with session validation (client-side)
-export async function getCurrentUser() {
-  try {
-    // First try to get the current session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError) {
-      console.error('Session error:', sessionError)
-      return { user: null, error: sessionError }
-    }
-
-    // If no session, return null user
-    if (!session) {
-      return { user: null, error: null }
-    }
-
-    // If session is expiring soon (less than 5 minutes), refresh it
-    if (session.expires_at && (session.expires_at * 1000 - Date.now()) < 5 * 60 * 1000) {
-      console.log('Session expiring soon, refreshing...')
-      await refreshSession()
-    }
-
-    const { data: { user }, error } = await supabase.auth.getUser()
-    
-    if (error) {
-      throw error
-    }
-
-    if (!user) {
-      return { user: null, error: null }
-    }
-
-    // Get partner profile data (now includes user info)
-    const { data: profile, error: profileError } = await supabase
-      .from('partner_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-
-    if (profileError) {
-      // If no partner profile exists (user hasn't completed onboarding), 
-      // return user with basic info from auth
-      if (profileError.code === 'PGRST116') {
-        console.log('No partner profile found - user needs to complete onboarding')
-        const userData: User = {
-          id: user.id,
-          email: user.email || '',
-          firstName: user.user_metadata?.first_name || '',
-          lastName: user.user_metadata?.last_name || '',
-        }
-        return { user: userData, error: null }
-      }
-      console.error('Error fetching partner profile:', profileError)
-      return { user: null, error: profileError }
-    }
-
-    const userData: User = {
-      id: user.id,
-      email: profile.email,
-      firstName: profile.first_name,
-      lastName: profile.last_name,
-    }
-
-    return { user: userData, error: null }
-  } catch (error) {
-    console.error('Error getting current user:', error)
-    return { user: null, error: error as Error }
-  }
-}
-
-// Get partner profile
-export async function getPartnerProfile(userId: string) {
-  try {
-    const { data, error } = await supabase
-      .from('partner_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-
-    if (error) {
-      // If no partner profile exists, return null (not an error)
-      if (error.code === 'PGRST116') {
-        return { profile: null, error: null }
-      }
-      // If table doesn't exist, also return null (not an error)
-      if (error.code === '42P01') {
-        console.log('partner_profiles table does not exist - user needs to complete onboarding')
-        return { profile: null, error: null }
-      }
-      throw error
-    }
-
-    return { profile: data as PartnerProfile, error: null }
-  } catch (error) {
-    console.error('Error getting partner profile:', error)
-    return { profile: null, error: error as Error }
-  }
-}
-
-// Check if user has completed onboarding
-export async function hasCompletedOnboarding(userId: string) {
-  try {
-    const { profile, error } = await getPartnerProfile(userId)
-    
-    if (error) {
-      return { completed: false, error }
-    }
-
-    return { completed: profile?.onboarded || false, error: null }
-  } catch (error) {
-    console.error('Error checking onboarding status:', error)
-    return { completed: false, error: error as Error }
-  }
-} 
+ 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
+import { getAuthenticatedUser, createServerSupabaseClient } from '@/lib/auth'
 
 interface RouteParams {
   params: Promise<{ fileId: string }>
@@ -9,7 +9,7 @@ interface RouteParams {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { fileId } = await params
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json(

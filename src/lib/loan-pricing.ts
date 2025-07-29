@@ -199,21 +199,18 @@ export function convertFormDataToPricingRequest(formData: FormData): LoanPricing
   return request;
 }
 
+import { apiClient } from './api-client'
+
 export async function getLoanPricing(request: LoanPricingRequest): Promise<PricingResponse> {
   try {
-    const response = await fetch('/api/loan-pricing', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
-
-    const data = await response.json();
+    const response = await apiClient.post<PricingResponse>('/loan-pricing', request);
     
     // Always return the response data, even if it's an error response
     // This allows the frontend to handle validation errors properly
-    return data;
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    return response.data as PricingResponse;
   } catch (error) {
     console.error('Error fetching loan pricing:', error);
     throw error;

@@ -1,17 +1,16 @@
 import { Loan, LoanFormData } from '@/types'
+import { apiClient } from './api-client'
 
 // Get all loans for an application
 export async function getLoans(applicationId: string): Promise<{ loans: Loan[]; error?: string }> {
   try {
-    const response = await fetch(`/api/applications/${applicationId}/loans`)
+    const response = await apiClient.get<{ loans: Loan[] }>(`/applications/${applicationId}/loans`)
     
-    if (!response.ok) {
-      const errorData = await response.json()
-      return { loans: [], error: errorData.error || 'Failed to fetch loans' }
+    if (response.error) {
+      return { loans: [], error: response.error }
     }
 
-    const data = await response.json()
-    return { loans: data.loans || [] }
+    return { loans: response.data?.loans || [] }
   } catch (error) {
     console.error('Error fetching loans:', error)
     return { loans: [], error: 'Failed to fetch loans' }
@@ -21,15 +20,13 @@ export async function getLoans(applicationId: string): Promise<{ loans: Loan[]; 
 // Get a specific loan
 export async function getLoan(applicationId: string, loanId: string): Promise<{ loan: Loan | null; error?: string }> {
   try {
-    const response = await fetch(`/api/applications/${applicationId}/loans/${loanId}`)
+    const response = await apiClient.get<{ loan: Loan }>(`/applications/${applicationId}/loans/${loanId}`)
     
-    if (!response.ok) {
-      const errorData = await response.json()
-      return { loan: null, error: errorData.error || 'Failed to fetch loan' }
+    if (response.error) {
+      return { loan: null, error: response.error }
     }
 
-    const data = await response.json()
-    return { loan: data.loan }
+    return { loan: response.data?.loan || null }
   } catch (error) {
     console.error('Error fetching loan:', error)
     return { loan: null, error: 'Failed to fetch loan' }
@@ -39,21 +36,13 @@ export async function getLoan(applicationId: string, loanId: string): Promise<{ 
 // Create a new loan
 export async function createLoan(applicationId: string, loanData: LoanFormData): Promise<{ loan: Loan | null; error?: string }> {
   try {
-    const response = await fetch(`/api/applications/${applicationId}/loans`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(loanData),
-    })
+    const response = await apiClient.post<{ loan: Loan }>(`/applications/${applicationId}/loans`, loanData)
     
-    if (!response.ok) {
-      const errorData = await response.json()
-      return { loan: null, error: errorData.error || 'Failed to create loan' }
+    if (response.error) {
+      return { loan: null, error: response.error }
     }
 
-    const data = await response.json()
-    return { loan: data.loan }
+    return { loan: response.data?.loan || null }
   } catch (error) {
     console.error('Error creating loan:', error)
     return { loan: null, error: 'Failed to create loan' }
@@ -63,21 +52,13 @@ export async function createLoan(applicationId: string, loanData: LoanFormData):
 // Update a loan
 export async function updateLoan(applicationId: string, loanId: string, loanData: Partial<LoanFormData>): Promise<{ loan: Loan | null; error?: string }> {
   try {
-    const response = await fetch(`/api/applications/${applicationId}/loans/${loanId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(loanData),
-    })
+    const response = await apiClient.put<{ loan: Loan }>(`/applications/${applicationId}/loans/${loanId}`, loanData)
     
-    if (!response.ok) {
-      const errorData = await response.json()
-      return { loan: null, error: errorData.error || 'Failed to update loan' }
+    if (response.error) {
+      return { loan: null, error: response.error }
     }
 
-    const data = await response.json()
-    return { loan: data.loan }
+    return { loan: response.data?.loan || null }
   } catch (error) {
     console.error('Error updating loan:', error)
     return { loan: null, error: 'Failed to update loan' }
@@ -87,13 +68,10 @@ export async function updateLoan(applicationId: string, loanId: string, loanData
 // Delete a loan
 export async function deleteLoan(applicationId: string, loanId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const response = await fetch(`/api/applications/${applicationId}/loans/${loanId}`, {
-      method: 'DELETE',
-    })
+    const response = await apiClient.delete<{ success: boolean }>(`/applications/${applicationId}/loans/${loanId}`)
     
-    if (!response.ok) {
-      const errorData = await response.json()
-      return { success: false, error: errorData.error || 'Failed to delete loan' }
+    if (response.error) {
+      return { success: false, error: response.error }
     }
 
     return { success: true }

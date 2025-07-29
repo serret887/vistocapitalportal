@@ -9,7 +9,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { signIn, hasCompletedOnboarding } from "@/lib/auth"
+import { signIn, hasCompletedOnboarding } from "@/lib/auth-client"
 import { toast } from "sonner"
 
 export function LoginForm({

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient, getCurrentUserFromRequest } from '@/lib/auth'
+import { createServerSupabaseClient, getAuthenticatedUser } from '@/lib/auth'
 
 // GET /api/applications/[id]/loans/[loanId] - Get a specific loan
 export async function GET(
@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const supabase = createServerSupabaseClient()
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -64,7 +64,7 @@ export async function PUT(
 ) {
   try {
     const supabase = createServerSupabaseClient()
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -122,7 +122,7 @@ export async function DELETE(
 ) {
   try {
     const supabase = createServerSupabaseClient()
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

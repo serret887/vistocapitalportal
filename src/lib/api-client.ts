@@ -1,5 +1,3 @@
-import { api as apiConfig } from './config'
-
 // API base URL
 const API_BASE = '/api'
 
@@ -43,15 +41,6 @@ class ApiClient {
     try {
       const result = await response.json()
       
-      if (apiConfig.logRequests) {
-        console.log(`[API Response] ${requestId}:`, {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url,
-          success: response.ok
-        })
-      }
-      
       if (!response.ok) {
         // Return the actual server error message
         const serverError = result.error || result.message || result.detail || `HTTP ${response.status}`
@@ -84,14 +73,14 @@ class ApiClient {
 
   private async retryRequest<T>(
     requestFn: () => Promise<ApiResponse<T>>,
-    retries: number = apiConfig.maxRetries
+    retries: number = 3
   ): Promise<ApiResponse<T>> {
     try {
       return await requestFn()
     } catch (error) {
       if (retries > 0) {
         console.warn(`Request failed, retrying... (${retries} attempts left)`)
-        await new Promise(resolve => setTimeout(resolve, apiConfig.retryDelay))
+        await new Promise(resolve => setTimeout(resolve, 1000))
         return this.retryRequest(requestFn, retries - 1)
       }
       throw error
@@ -115,8 +104,8 @@ class ApiClient {
       body,
       headers: customHeaders = {},
       isFormData = false,
-      timeout = apiConfig.timeout,
-      retries = apiConfig.maxRetries
+      timeout = 10000,
+      retries = 3
     } = options
 
     const requestId = this.generateRequestId()
@@ -149,13 +138,7 @@ class ApiClient {
           }
         }
 
-        if (apiConfig.logRequests) {
-          console.log(`[API Request] ${requestId}:`, {
-            method,
-            url: `${API_BASE}${endpoint}`,
-            body: body ? (isFormData ? '[FormData]' : body) : undefined
-          })
-        }
+
 
         // Create abort controller for timeout
         const controller = new AbortController()
@@ -217,16 +200,7 @@ class ApiClient {
     })
   }
 
-  // Health check method
-  async healthCheck(): Promise<boolean> {
-    try {
-      const response = await this.get('/health')
-      return response.success || false
-    } catch (error) {
-      console.error('Health check failed:', error)
-      return false
-    }
-  }
+
 }
 
 // Create and export a singleton instance

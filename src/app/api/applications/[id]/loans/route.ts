@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient, getCurrentUserFromRequest } from '@/lib/auth'
+import { createServerSupabaseClient, getAuthenticatedUser } from '@/lib/auth'
 // import { sendLoanNotification } from '@/lib/slack-notifications'
 
 // GET /api/applications/[id]/loans - Get all loans for an application
@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const supabase = createServerSupabaseClient()
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -65,7 +65,7 @@ export async function POST(
 ) {
   try {
     const supabase = createServerSupabaseClient()
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

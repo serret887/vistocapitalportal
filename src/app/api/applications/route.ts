@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
+import { getAuthenticatedUser, createServerSupabaseClient } from '@/lib/auth'
 import { sendApplicationNotification } from '@/lib/slack-notifications'
 import { createDefaultConditions } from '@/lib/conditions'
 import type { LoanApplicationFormData } from '@/types'
@@ -7,7 +7,7 @@ import type { LoanApplicationFormData } from '@/types'
 // GET /api/applications - Get all applications for the current partner
 export async function GET(request: NextRequest) {
   try {
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json(
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 // POST /api/applications - Create a new application
 export async function POST(request: NextRequest) {
   try {
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json(

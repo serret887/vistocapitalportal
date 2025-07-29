@@ -10,6 +10,7 @@ import { CONDITION_STATUS_LABELS, CONDITION_STATUS_COLORS } from '@/types'
 
 interface ApplicationConditionsProps {
   conditions: (ApplicationCondition & { activities: any[] })[]
+  applicationId?: string
 }
 
 export function ApplicationConditions({ conditions }: ApplicationConditionsProps) {

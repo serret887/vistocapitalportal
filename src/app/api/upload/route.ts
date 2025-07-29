@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
+import { getAuthenticatedUser, createServerSupabaseClient } from '@/lib/auth'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ALLOWED_TYPES = [
@@ -13,7 +13,7 @@ const ALLOWED_TYPES = [
 // POST /api/upload - Upload a file
 export async function POST(request: NextRequest) {
   try {
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json(

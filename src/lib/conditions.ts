@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { createServerSupabaseClient } from './auth'
 import type { ApplicationCondition, ConditionActivity, ConditionType } from '@/types'
 
 // Create default conditions for a new application
@@ -38,6 +38,7 @@ export async function createDefaultConditions(applicationId: string, bankAccount
   ]
 
   try {
+    const supabase = createServerSupabaseClient()
     const { data, error } = await supabase
       .from('application_conditions')
       .insert(conditions)
@@ -49,7 +50,7 @@ export async function createDefaultConditions(applicationId: string, bankAccount
     }
 
     // Create initial activity for each condition
-    const activities = data.map(condition => ({
+    const activities = data.map((condition: any) => ({
       condition_id: condition.id,
       activity_type: 'created',
       message: 'This condition was added to the application'
@@ -69,6 +70,7 @@ export async function createDefaultConditions(applicationId: string, bankAccount
 // Get conditions for an application
 export async function getApplicationConditions(applicationId: string) {
   try {
+    const supabase = createServerSupabaseClient()
     const { data: conditions, error: conditionsError } = await supabase
       .from('application_conditions')
       .select('*')
@@ -81,7 +83,7 @@ export async function getApplicationConditions(applicationId: string) {
 
     // Get activities for each condition
     const conditionsWithActivities = await Promise.all(
-      conditions.map(async (condition) => {
+      conditions.map(async (condition: any) => {
         const { data: activities, error: activitiesError } = await supabase
           .from('condition_activities')
           .select('*')
@@ -109,6 +111,7 @@ export async function getApplicationConditions(applicationId: string) {
 // Update condition status
 export async function updateConditionStatus(conditionId: string, status: string, message?: string) {
   try {
+    const supabase = createServerSupabaseClient()
     const { data, error } = await supabase
       .from('application_conditions')
       .update({ status })
@@ -141,6 +144,7 @@ export async function updateConditionStatus(conditionId: string, status: string,
 // Add activity to condition
 export async function addConditionActivity(conditionId: string, activityType: string, message: string) {
   try {
+    const supabase = createServerSupabaseClient()
     const { data, error } = await supabase
       .from('condition_activities')
       .insert({

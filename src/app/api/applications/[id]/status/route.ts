@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
+import { getAuthenticatedUser, createServerSupabaseClient } from '@/lib/auth'
 import type { LoanApplicationStatus } from '@/types'
 
 interface RouteParams {
@@ -10,7 +10,7 @@ interface RouteParams {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json(

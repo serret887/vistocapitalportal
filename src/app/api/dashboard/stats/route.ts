@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUserFromRequest, createServerSupabaseClient } from '@/lib/auth'
+import { getAuthenticatedUser, createServerSupabaseClient } from '@/lib/auth'
 import type { DashboardStats, LoanApplicationStatus } from '@/types'
 
 // GET /api/dashboard/stats - Get dashboard statistics
 export async function GET(request: NextRequest) {
   try {
-    const { user, error: userError } = await getCurrentUserFromRequest(request)
+    const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
       return NextResponse.json(

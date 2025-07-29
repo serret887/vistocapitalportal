@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { OnboardingFormData } from '@/types'
 import { supabase } from '@/lib/supabase'
-import { getCurrentUser, getPartnerProfile } from '@/lib/auth'
+import { getCurrentUser, getPartnerProfile } from '@/lib/auth-client'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 

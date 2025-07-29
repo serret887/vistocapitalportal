@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getCurrentUser, hasCompletedOnboarding } from '@/lib/auth'
+import { getCurrentUser, hasCompletedOnboarding } from '@/lib/auth-client'
 import { toast } from 'sonner'
 
 interface ProtectedRouteProps {
