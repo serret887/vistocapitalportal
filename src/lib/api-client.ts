@@ -19,6 +19,7 @@ class ApiClient {
   private async getAuthHeaders(): Promise<HeadersInit> {
     // Get token from localStorage or sessionStorage
     const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')
+    console.log('getAuthHeaders: Token found:', !!token)
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -167,6 +168,7 @@ class ApiClient {
   }
 
   async post<T>(endpoint: string, body: any, options?: { timeout?: number; retries?: number }): Promise<ApiResponse<T>> {
+    console.log(`apiClient.post: Making POST request to ${endpoint}`)
     return this.request<T>(endpoint, { method: 'POST', body, ...options })
   }
 

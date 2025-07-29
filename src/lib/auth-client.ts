@@ -80,16 +80,20 @@ export async function signIn(data: LoginData) {
 // Sign out the current user
 export async function signOut() {
   try {
+    console.log('signOut: Starting logout process...')
+    
     // Call the signout API endpoint
-    await apiClient.post('/auth/signout', {})
+    const response = await apiClient.post('/auth/signout', {})
+    console.log('signOut: API response:', response)
     
     // Clear stored token
     localStorage.removeItem('auth_token')
     sessionStorage.removeItem('auth_token')
+    console.log('signOut: Tokens cleared from storage')
     
     return { error: null }
   } catch (error) {
-    console.error('Error signing out:', error)
+    console.error('signOut: Error during logout:', error)
     // Still clear the token even if API call fails
     localStorage.removeItem('auth_token')
     sessionStorage.removeItem('auth_token')

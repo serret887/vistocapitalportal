@@ -5,6 +5,10 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { Home, Calculator, FileText, LogOut } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { signOut } from "@/lib/auth-client"
+import { toast } from "sonner"
 
 import {
   Sidebar,
@@ -129,15 +133,45 @@ const data = {
 
 // Client component for sign out functionality
 function SignOutButton() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+
   const handleSignOut = async () => {
-    // Future: Implement sign out functionality
-    console.log('Sign out clicked')
+    try {
+      setIsLoading(true)
+      console.log('Starting sign out process...')
+      
+      // Check if token exists before making the request
+      const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')
+      console.log('Token exists:', !!token)
+      
+      const { error } = await signOut()
+      
+      if (error) {
+        console.error('Sign out error:', error)
+        toast.error('Failed to sign out. Please try again.')
+        return
+      }
+
+      console.log('Sign out successful, redirecting to login...')
+      toast.success('Signed out successfully')
+      router.push('/login')
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error)
+      toast.error('An unexpected error occurred during sign out')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
-    <SidebarMenuButton onClick={handleSignOut} className="text-sidebar-foreground/70 hover:text-sidebar-foreground">
+    <SidebarMenuButton 
+      onClick={handleSignOut} 
+      className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
+      disabled={isLoading}
+    >
       <LogOut className="h-4 w-4" />
-      Sign Out
+      {isLoading ? "Signing out..." : "Sign Out"}
     </SidebarMenuButton>
   )
 }
