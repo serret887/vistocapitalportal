@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ApplicationsTable } from '@/components/dashboard/applications-table'
-import { ApplicationForm } from '@/components/dashboard/application-form'
+import { EnhancedApplicationForm } from '@/components/dashboard/enhanced-application-form'
 import { getDashboardStats, getLoanApplications, deleteLoanApplication } from '@/lib/loan-applications'
 import type { DashboardStats, LoanApplication, LoanApplicationStatus } from '@/types'
 import { Plus, Users, TrendingUp, DollarSign, FileText } from 'lucide-react'
@@ -144,7 +144,7 @@ export default function DashboardPage() {
   if (showApplicationForm) {
     return (
       <div className="container mx-auto p-6">
-        <ApplicationForm
+        <EnhancedApplicationForm
           onSuccess={handleApplicationSuccess}
           onCancel={() => setShowApplicationForm(false)}
         />
