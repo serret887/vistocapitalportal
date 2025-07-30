@@ -24,7 +24,8 @@ export default function DashboardPage() {
   const [applications, setApplications] = useState<LoanApplicationWithBorrower[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showApplicationForm, setShowApplicationForm] = useState(false)
-  const requestId = generateRequestId()
+  const [dataLoaded, setDataLoaded] = useState(false)
+  const requestId = useMemo(() => generateRequestId(), [])
 
   console.log(`[${requestId}] DashboardPage component initialized`)
 
@@ -42,6 +43,12 @@ export default function DashboardPage() {
   }, [searchParams, requestId])
 
   const loadDashboardData = useCallback(async () => {
+    // Prevent multiple simultaneous calls
+    if (isLoading && dataLoaded) {
+      console.log(`[${requestId}] Skipping data load - already loading or loaded`)
+      return
+    }
+
     console.log(`[${requestId}] Loading dashboard data`)
     setIsLoading(true)
     try {
@@ -114,14 +121,18 @@ export default function DashboardPage() {
       toast.error('An unexpected error occurred')
     } finally {
       setIsLoading(false)
+      setDataLoaded(true)
       console.log(`[${requestId}] Dashboard data loading completed`)
     }
-  }, [router, requestId])
+  }, [router, requestId, isLoading, dataLoaded])
 
+  // Only load data once when component mounts
   useEffect(() => {
     console.log(`[${requestId}] Dashboard useEffect triggered`)
-    loadDashboardData()
-  }, [loadDashboardData])
+    if (!dataLoaded) {
+      loadDashboardData()
+    }
+  }, [loadDashboardData, dataLoaded, requestId])
 
   const handleStatusClick = useCallback((status: LoanApplicationStatus) => {
     console.log(`[${requestId}] Status clicked`, { status })
@@ -133,6 +144,7 @@ export default function DashboardPage() {
   const handleApplicationSuccess = useCallback(() => {
     console.log(`[${requestId}] Application created successfully`)
     setShowApplicationForm(false)
+    setDataLoaded(false) // Reset to trigger data reload
     loadDashboardData() // Refresh data after new application
     toast.success('Application created successfully!')
   }, [loadDashboardData, requestId])
@@ -162,6 +174,7 @@ export default function DashboardPage() {
 
       if (success) {
         toast.success('Application deleted successfully')
+        setDataLoaded(false) // Reset to trigger data reload
         loadDashboardData() // Refresh data
       }
     } catch (error) {
