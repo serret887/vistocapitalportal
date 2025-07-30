@@ -52,7 +52,6 @@ export async function POST(request: NextRequest) {
         email: email,
         onboarded: false,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       }])
 
     if (profileError) {

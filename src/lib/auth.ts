@@ -23,7 +23,6 @@ export interface PartnerProfile {
   license_state: string | null
   onboarded: boolean
   created_at: string
-  updated_at: string
 }
 
 // Create a server-side Supabase client for API routes
