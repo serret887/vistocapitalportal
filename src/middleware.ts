@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/auth'
+import { 
+  getCorrelationId, 
+  logRequest, 
+  logResponse, 
+  logError, 
+  logDebug,
+  logWithCorrelation 
+} from '@/lib/utils'
 
 // List of public endpoints that do not require authentication
 const PUBLIC_ENDPOINTS = [
@@ -11,6 +19,11 @@ const PUBLIC_ENDPOINTS = [
   '/login',
   '/signup',
   '/',
+]
+
+// List of endpoints that require authentication but not onboarding completion
+const AUTH_ONLY_ENDPOINTS = [
+  '/api/auth/me',
 ]
 
 function normalizePathname(pathname: string): string {
@@ -35,9 +48,11 @@ function isPublicRoute(pathname: string): boolean {
   )
 }
 
-function requiresOnboarding(pathname: string): boolean {
-  // All authenticated routes require onboarding, except /onboarding itself
-  return !isPublicRoute(pathname) && !pathname.startsWith('/onboarding')
+function isAuthOnlyRoute(pathname: string): boolean {
+  const normalizedPath = normalizePathname(pathname)
+  return AUTH_ONLY_ENDPOINTS.some(endpoint => 
+    normalizedPath === endpoint || normalizedPath.startsWith(endpoint + '/')
+  )
 }
 
 // Minimal token validation (replace with real JWT validation in production)
@@ -45,12 +60,19 @@ function isValidToken(token: string | null): boolean {
   return !!token && token.length > 10
 }
 
-function extractToken(authHeader: string | null): string | null {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null
+function extractToken(request: NextRequest): string | null {
+  // First check Authorization header (for API requests)
+  const authHeader = request.headers.get('authorization')
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.replace('Bearer ', '')
+    return token || null
   }
-  const token = authHeader.replace('Bearer ', '')
-  return token || null // Return null for empty tokens, not empty string
+  
+  // Then check cookies (for navigation)
+  const cookieToken = request.cookies.get('auth_token')?.value
+  if (cookieToken) return cookieToken
+  
+  return null
 }
 
 function addSecurityHeaders(response: NextResponse): NextResponse {
@@ -62,8 +84,10 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 }
 
 // Check if user has completed onboarding by querying the database
-async function checkOnboardingStatus(userId: string): Promise<boolean> {
+async function checkOnboardingStatus(userId: string, correlationId: string): Promise<boolean> {
   try {
+    logDebug(correlationId, 'Checking onboarding status for user', { userId })
+    
     const serverSupabase = createServerSupabaseClient()
     
     const { data: profile, error } = await serverSupabase
@@ -73,105 +97,158 @@ async function checkOnboardingStatus(userId: string): Promise<boolean> {
       .single()
 
     if (error) {
-      console.error('Error checking onboarding status:', error)
+      logError(correlationId, error, { userId })
       return false
     }
 
-    return profile?.onboarded || false
+    const onboarded = profile?.onboarded || false
+    logDebug(correlationId, 'Onboarding status retrieved', { userId, onboarded })
+    return onboarded
   } catch (error) {
-    console.error('Error checking onboarding status:', error)
+    logError(correlationId, error as Error, { userId })
     return false
   }
 }
 
+// Helper function to create error responses
+function createErrorResponse(
+  correlationId: string,
+  pathname: string,
+  status: number,
+  message: string,
+  data: any,
+  request: NextRequest
+): NextResponse {
+  if (pathname.startsWith('/api/')) {
+    const response = NextResponse.json({ error: message, ...data }, { status })
+    response.headers.set('x-correlation-id', correlationId)
+    logResponse(correlationId, status, message)
+    return addSecurityHeaders(response)
+  } else {
+    const redirectUrl = status === 401 ? '/login' : '/onboarding'
+    // Use the request URL as base for proper URL construction
+    const response = NextResponse.redirect(new URL(redirectUrl, request.url))
+    response.headers.set('x-correlation-id', correlationId)
+    logResponse(correlationId, 302, `Redirecting to ${redirectUrl}`)
+    return addSecurityHeaders(response)
+  }
+}
+
 export async function middleware(request: NextRequest) {
+  const correlationId = getCorrelationId(request)
   const { pathname } = request.nextUrl
 
-  // Allow public routes
+  // Log the incoming request
+  logRequest(correlationId, request.method, request.url, 
+    Object.fromEntries(request.headers.entries()))
+
+  logWithCorrelation(correlationId, 'info', 'Middleware processing request', {
+    pathname,
+    method: request.method,
+    isApiRoute: pathname.startsWith('/api/'),
+    isPublicRoute: isPublicRoute(pathname),
+    isAuthOnlyRoute: isAuthOnlyRoute(pathname)
+  })
+
+  // STEP 1: Check if it's a public route - if yes, allow access
   if (isPublicRoute(pathname)) {
-    return addSecurityHeaders(NextResponse.next())
+    logWithCorrelation(correlationId, 'info', 'Allowing public route')
+    const response = addSecurityHeaders(NextResponse.next())
+    response.headers.set('x-correlation-id', correlationId)
+    logResponse(correlationId, 200, 'Public route allowed')
+    return response
   }
 
-  // Check for authentication
-  const authHeader = request.headers.get('authorization')
-  const token = extractToken(authHeader)
+  // STEP 2: Check if token is valid - if not, redirect to login
+  const token = extractToken(request)
+  
+  logWithCorrelation(correlationId, 'debug', 'Token validation', {
+    hasToken: !!token,
+    tokenLength: token?.length,
+    tokenPreview: token ? `${token.substring(0, 20)}...` : null
+  })
 
   if (!isValidToken(token)) {
-    // API routes: return JSON error, others: redirect to login
-    if (pathname.startsWith('/api/')) {
-      return addSecurityHeaders(
-        NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-      )
-    } else {
-      return addSecurityHeaders(
-        NextResponse.redirect(new URL('/login', request.url))
-      )
-    }
+    logWithCorrelation(correlationId, 'warn', 'Invalid or missing token')
+    return createErrorResponse(correlationId, pathname, 401, 'Authentication required', undefined, request)
   }
 
-  // Get user from token to check onboarding status
+  // STEP 3: Validate token with Supabase and get user
   try {
+    logWithCorrelation(correlationId, 'debug', 'Validating token with Supabase')
+    
     const serverSupabase = createServerSupabaseClient()
+    const { data: { user }, error } = await serverSupabase.auth.getUser(token!)
     
-    if (!token) {
-      if (pathname.startsWith('/api/')) {
-        return addSecurityHeaders(
-          NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-        )
-      } else {
-        return addSecurityHeaders(
-          NextResponse.redirect(new URL('/login', request.url))
-        )
-      }
-    }
-    
-    const { data: { user }, error } = await serverSupabase.auth.getUser(token)
+    logWithCorrelation(correlationId, 'debug', 'Supabase auth result', {
+      hasUser: !!user,
+      userId: user?.id,
+      error: error?.message
+    })
     
     if (error || !user) {
-      if (pathname.startsWith('/api/')) {
-        return addSecurityHeaders(
-          NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-        )
-      } else {
-        return addSecurityHeaders(
-          NextResponse.redirect(new URL('/login', request.url))
-        )
-      }
+      logWithCorrelation(correlationId, 'error', 'Supabase token validation failed', {
+        error: error?.message,
+        hasUser: !!user
+      })
+      return createErrorResponse(correlationId, pathname, 401, 'Invalid token', undefined, request)
     }
 
-    // Check onboarding status from database
-    const onboarded = await checkOnboardingStatus(user.id)
-    
-    if (requiresOnboarding(pathname) && !onboarded) {
-      if (pathname.startsWith('/api/')) {
-        return addSecurityHeaders(
-          NextResponse.json({ error: 'Onboarding required', needsOnboarding: true }, { status: 403 })
-        )
-      } else {
-        return addSecurityHeaders(
-          NextResponse.redirect(new URL('/onboarding', request.url))
-        )
-      }
+    logWithCorrelation(correlationId, 'info', 'Token validated successfully', {
+      userId: user.id,
+      userEmail: user.email
+    })
+
+    // STEP 4: Check if this is an auth-only route (doesn't require onboarding)
+    if (isAuthOnlyRoute(pathname)) {
+      logWithCorrelation(correlationId, 'info', 'Allowing auth-only route', {
+        userId: user.id,
+        userEmail: user.email,
+        pathname
+      })
+
+      // Add user info to headers for API routes
+      const response = NextResponse.next()
+      response.headers.set('x-user-id', user.id)
+      response.headers.set('x-user-email', user.email || '')
+      response.headers.set('x-correlation-id', correlationId)
+
+      return addSecurityHeaders(response)
     }
+
+    // STEP 5: Check onboarding status for routes that require it
+    const onboarded = await checkOnboardingStatus(user.id, correlationId)
+    
+    logWithCorrelation(correlationId, 'debug', 'Onboarding check result', {
+      userId: user.id,
+      onboarded,
+      currentPath: pathname,
+      isOnboardingPage: pathname.startsWith('/onboarding')
+    })
+    
+    // If user is not onboarded and not on onboarding page, redirect to onboarding
+    if (!onboarded && !pathname.includes('/onboarding')) {
+      logWithCorrelation(correlationId, 'info', 'User needs onboarding, redirecting')
+      return createErrorResponse(correlationId, pathname, 403, 'Onboarding required', { needsOnboarding: true }, request)
+    }
+
+    // STEP 6: All checks passed - allow access
+    logWithCorrelation(correlationId, 'info', 'Request authorized successfully', {
+      userId: user.id,
+      userEmail: user.email,
+      onboarded
+    })
 
     // Add user info to headers for API routes
     const response = NextResponse.next()
     response.headers.set('x-user-id', user.id)
     response.headers.set('x-user-email', user.email || '')
+    response.headers.set('x-correlation-id', correlationId)
 
-    // All checks passed
     return addSecurityHeaders(response)
   } catch (error) {
-    console.error('Error in middleware:', error)
-    if (pathname.startsWith('/api/')) {
-      return addSecurityHeaders(
-        NextResponse.json({ error: 'Authentication error' }, { status: 500 })
-      )
-    } else {
-      return addSecurityHeaders(
-        NextResponse.redirect(new URL('/login', request.url))
-      )
-    }
+    logError(correlationId, error as Error, { pathname })
+    return createErrorResponse(correlationId, pathname, 500, 'Authentication error', undefined, request)
   }
 }
 

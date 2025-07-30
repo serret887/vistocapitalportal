@@ -36,10 +36,7 @@ export async function POST(request: NextRequest) {
       monthly_deal_volume: onboardingData.monthly_deal_volume || 0,
       transaction_volume: onboardingData.transaction_volume || 0,
       transaction_types: onboardingData.transaction_types || [],
-      license_number: onboardingData.license_number || null,
-      license_state: onboardingData.license_state || null,
       onboarded: true,
-      updated_at: new Date().toISOString(),
     }
 
     // Check if partner profile already exists
