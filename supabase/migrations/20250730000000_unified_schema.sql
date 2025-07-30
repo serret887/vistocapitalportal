@@ -45,6 +45,7 @@ CREATE TABLE partner_profiles (
   partner_type TEXT CHECK (partner_type IN ('wholesaler', 'investor', 'real_estate_agent', 'marketing_partner')),
   onboarded BOOLEAN DEFAULT FALSE,
   phone_number TEXT,
+  transaction_types JSONB DEFAULT '[]'::jsonb,
   monthly_deal_volume INTEGER,
   transaction_volume NUMERIC,
   created_at TIMESTAMPTZ DEFAULT NOW()
