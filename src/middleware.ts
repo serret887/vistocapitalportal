@@ -1,262 +1,187 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/auth'
 
-// In-memory rate limiting (use Redis in production)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+// List of public endpoints that do not require authentication
+const PUBLIC_ENDPOINTS = [
+  '/api/health',
+  '/api/auth/callback',
+  '/api/auth/signup',
+  '/api/auth/signin',
+  '/api/auth/login',
+  '/login',
+  '/signup',
+  '/',
+]
 
-// Rate limiting function
-function checkRateLimit(identifier: string): boolean {
-  const now = Date.now()
-  const windowStart = now - (60 * 1000) // 1 minute window
-
-  const current = rateLimitMap.get(identifier)
-
-  if (!current || current.resetTime < now) {
-    rateLimitMap.set(identifier, { count: 1, resetTime: now + (60 * 1000) })
-    return true
+function normalizePathname(pathname: string): string {
+  // Remove query parameters and hash fragments
+  let normalized = pathname.split('?')[0].split('#')[0]
+  
+  // Handle multiple consecutive slashes by replacing them with single slash
+  normalized = normalized.replace(/\/+/g, '/')
+  
+  // Ensure the path starts with a single slash
+  if (!normalized.startsWith('/')) {
+    normalized = '/' + normalized
   }
-
-  if (current.count >= 100) { // 100 requests per minute
-    return false
-  }
-
-  current.count++
-  return true
+  
+  return normalized
 }
 
-// Verify JWT token and get user with caching
-const tokenCache = new Map<string, { user: any; expires: number }>()
-
-async function verifyToken(token: string) {
-  try {
-    // Check cache first
-    const cached = tokenCache.get(token)
-    if (cached && cached.expires > Date.now()) {
-      return { user: cached.user, error: null }
-    }
-
-    const serverSupabase = createServerSupabaseClient()
-    const { data: { user }, error } = await serverSupabase.auth.getUser(token)
-
-    if (error || !user) {
-      return { user: null, error: error || new Error('Invalid token') }
-    }
-
-    // Cache the result for 5 minutes
-    tokenCache.set(token, {
-      user,
-      expires: Date.now() + (5 * 60 * 1000) // 5 minutes
-    })
-
-    return { user, error: null }
-  } catch (error) {
-    console.error('Error verifying token:', error)
-    return { user: null, error: error as Error }
-  }
+function isPublicRoute(pathname: string): boolean {
+  const normalizedPath = normalizePathname(pathname)
+  return PUBLIC_ENDPOINTS.some(endpoint => 
+    normalizedPath === endpoint || normalizedPath.startsWith(endpoint + '/')
+  )
 }
 
-// Check if user has completed onboarding
-async function checkOnboardingStatus(userId: string): Promise<{ onboarded: boolean; error?: string }> {
+function requiresOnboarding(pathname: string): boolean {
+  // All authenticated routes require onboarding, except /onboarding itself
+  return !isPublicRoute(pathname) && !pathname.startsWith('/onboarding')
+}
+
+// Minimal token validation (replace with real JWT validation in production)
+function isValidToken(token: string | null): boolean {
+  return !!token && token.length > 10
+}
+
+function extractToken(authHeader: string | null): string | null {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null
+  }
+  const token = authHeader.replace('Bearer ', '')
+  return token || null // Return null for empty tokens, not empty string
+}
+
+function addSecurityHeaders(response: NextResponse): NextResponse {
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  return response
+}
+
+// Check if user has completed onboarding by querying the database
+async function checkOnboardingStatus(userId: string): Promise<boolean> {
   try {
     const serverSupabase = createServerSupabaseClient()
-
-    // Get partner profile
-    const { data: partnerProfile, error } = await serverSupabase
+    
+    const { data: profile, error } = await serverSupabase
       .from('partner_profiles')
       .select('onboarded')
       .eq('user_id', userId)
       .single()
 
     if (error) {
-      // If no profile found, user hasn't completed onboarding
-      if (error.code === 'PGRST116') {
-        return { onboarded: false }
-      }
       console.error('Error checking onboarding status:', error)
-      return { onboarded: false, error: 'Failed to check onboarding status' }
+      return false
     }
 
-    return { onboarded: partnerProfile?.onboarded || false }
+    return profile?.onboarded || false
   } catch (error) {
     console.error('Error checking onboarding status:', error)
-    return { onboarded: false, error: 'Failed to check onboarding status' }
+    return false
   }
-}
-
-// Add security headers
-function addSecurityHeaders(response: NextResponse): NextResponse {
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('X-Frame-Options', 'DENY')
-  response.headers.set('X-XSS-Protection', '1; mode=block')
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-
-  // Add CORS headers for API routes
-  response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_FRONTEND_URL || '*')
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-
-  return response
 }
 
 export async function middleware(request: NextRequest) {
-  const startTime = Date.now()
-  const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  const { pathname } = request.nextUrl
 
-  console.log(`[Middleware] ${requestId}: ${request.method} ${request.nextUrl.pathname}`)
-
-  // Add security headers to all responses
-  const addSecurityHeaders = (response: NextResponse) => {
-    response.headers.set('X-Frame-Options', 'DENY')
-    response.headers.set('X-Content-Type-Options', 'nosniff')
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-    return response
+  // Allow public routes
+  if (isPublicRoute(pathname)) {
+    return addSecurityHeaders(NextResponse.next())
   }
 
-  // Handle CORS preflight requests
-  if (request.method === 'OPTIONS') {
-    const response = NextResponse.next()
-    return addSecurityHeaders(response)
-  }
+  // Check for authentication
+  const authHeader = request.headers.get('authorization')
+  const token = extractToken(authHeader)
 
-  // Only apply to API routes
-  if (!request.nextUrl.pathname.startsWith('/api/')) {
-    const response = NextResponse.next()
-    return addSecurityHeaders(response)
-  }
-
-  // Skip authentication for public API endpoints
-  const publicEndpoints = [
-    '/api/health',
-    '/api/auth/callback',
-    '/api/auth/signup',
-    '/api/auth/signin',
-    '/api/auth/login',
-  ]
-
-  if (publicEndpoints.some(endpoint => request.nextUrl.pathname.startsWith(endpoint))) {
-    const response = NextResponse.next()
-    return addSecurityHeaders(response)
-  }
-
-  try {
-    // Rate limiting
-    const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
-    if (!checkRateLimit(clientIp)) {
-      const response = NextResponse.json(
-        { error: 'Rate limit exceeded. Please try again later.' },
-        { status: 429 }
+  if (!isValidToken(token)) {
+    // API routes: return JSON error, others: redirect to login
+    if (pathname.startsWith('/api/')) {
+      return addSecurityHeaders(
+        NextResponse.json({ error: 'Authentication required' }, { status: 401 })
       )
-      return addSecurityHeaders(response)
+    } else {
+      return addSecurityHeaders(
+        NextResponse.redirect(new URL('/login', request.url))
+      )
     }
+  }
 
-    // Check authentication for protected routes
-    const authHeader = request.headers.get('authorization')
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log(`[Middleware] ${requestId}: No auth header`)
-      if (request.nextUrl.pathname.startsWith('/api/')) {
-        const response = NextResponse.json(
-          { error: 'Authentication required' },
-          { status: 401 }
+  // Get user from token to check onboarding status
+  try {
+    const serverSupabase = createServerSupabaseClient()
+    
+    if (!token) {
+      if (pathname.startsWith('/api/')) {
+        return addSecurityHeaders(
+          NextResponse.json({ error: 'Invalid token' }, { status: 401 })
         )
-        return addSecurityHeaders(response)
       } else {
-        const response = NextResponse.redirect(new URL('/login', request.url))
-        return addSecurityHeaders(response)
+        return addSecurityHeaders(
+          NextResponse.redirect(new URL('/login', request.url))
+        )
       }
     }
-
-    const token = authHeader.replace('Bearer ', '')
-
-    // Verify the token and get user with caching
-    const authStart = Date.now()
-    const { user, error } = await verifyToken(token)
-    const authTime = Date.now() - authStart
-
+    
+    const { data: { user }, error } = await serverSupabase.auth.getUser(token)
+    
     if (error || !user) {
-      console.log(`[Middleware] ${requestId}: Auth failed in ${authTime}ms`)
-      if (request.nextUrl.pathname.startsWith('/api/')) {
-        const response = NextResponse.json(
-          { error: 'Invalid or expired token' },
-          { status: 401 }
+      if (pathname.startsWith('/api/')) {
+        return addSecurityHeaders(
+          NextResponse.json({ error: 'Invalid token' }, { status: 401 })
         )
-        return addSecurityHeaders(response)
       } else {
-        const response = NextResponse.redirect(new URL('/login', request.url))
-        return addSecurityHeaders(response)
+        return addSecurityHeaders(
+          NextResponse.redirect(new URL('/login', request.url))
+        )
       }
     }
 
-    console.log(`[Middleware] ${requestId}: Authenticated successfully in ${authTime}ms`)
-
-    // Check onboarding status for protected routes that require onboarding
-    const onboardingRequiredRoutes = [
-      '/api/dashboard',
-      '/api/applications',
-      '/api/files'
-    ]
-
-    const requiresOnboarding = onboardingRequiredRoutes.some(route =>
-      request.nextUrl.pathname.startsWith(route)
-    )
-
-    if (requiresOnboarding) {
-      const { onboarded, error: onboardingError } = await checkOnboardingStatus(user.id)
-
-      if (onboardingError) {
-        const response = NextResponse.json(
-          { error: onboardingError },
-          { status: 500 }
+    // Check onboarding status from database
+    const onboarded = await checkOnboardingStatus(user.id)
+    
+    if (requiresOnboarding(pathname) && !onboarded) {
+      if (pathname.startsWith('/api/')) {
+        return addSecurityHeaders(
+          NextResponse.json({ error: 'Onboarding required', needsOnboarding: true }, { status: 403 })
         )
-        return addSecurityHeaders(response)
-      }
-
-      if (!onboarded) {
-        const response = NextResponse.json(
-          { error: 'Onboarding required', needsOnboarding: true },
-          { status: 403 }
+      } else {
+        return addSecurityHeaders(
+          NextResponse.redirect(new URL('/onboarding', request.url))
         )
-        return addSecurityHeaders(response)
       }
     }
-
-    // Add user information to request headers for API routes to use
-    const requestHeaders = new Headers(request.headers)
-    requestHeaders.set('x-user-id', user.id)
-    requestHeaders.set('x-user-email', user.email || '')
-    requestHeaders.set('x-request-id', requestId)
-
-    // Continue to the next middleware or the final handler
-    const response = NextResponse.next()
 
     // Add user info to headers for API routes
-    if (request.nextUrl.pathname.startsWith('/api/')) {
-      response.headers.set('x-user-id', user.id)
-      response.headers.set('x-user-email', user.email || '')
-    }
+    const response = NextResponse.next()
+    response.headers.set('x-user-id', user.id)
+    response.headers.set('x-user-email', user.email || '')
 
-    const totalTime = Date.now() - startTime
-    console.log(`[Middleware] ${requestId}: Completed in ${totalTime}ms`)
-
+    // All checks passed
     return addSecurityHeaders(response)
-
   } catch (error) {
-    console.error('Middleware authentication error:', error)
-    const response = NextResponse.json(
-      { error: 'Authentication failed' },
-      { status: 401 }
-    )
-    return addSecurityHeaders(response)
+    console.error('Error in middleware:', error)
+    if (pathname.startsWith('/api/')) {
+      return addSecurityHeaders(
+        NextResponse.json({ error: 'Authentication error' }, { status: 500 })
+      )
+    } else {
+      return addSecurityHeaders(
+        NextResponse.redirect(new URL('/login', request.url))
+      )
+    }
   }
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match only API routes
-     */
     '/api/:path*',
+    '/dashboard/:path*',
+    '/applications/:path*',
+    '/dashboard',
+    '/applications',
+    '/onboarding',
   ],
 }
