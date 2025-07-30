@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { generateLoanOptions, LoanOption, convertFormDataToPricingRequest, getLoanPricing } from "@/lib/loan-pricing";
 import { PricingResponse, LoanValidationResult } from "../../../lib/types/pricing";
@@ -77,7 +77,7 @@ const STATE_MAPPING = [
   { name: 'Wyoming', value: 'WY' }
 ];
 
-export default function DSCRCalculator() {
+function DSCRCalculatorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const applicationId = searchParams.get('applicationId');
@@ -512,5 +512,13 @@ export default function DSCRCalculator() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DSCRCalculator() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DSCRCalculatorContent />
+    </Suspense>
   );
 } 

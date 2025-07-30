@@ -13,7 +13,7 @@ import { getLoanApplication, deleteLoanApplication, updateLoanApplication } from
 import { getLoans, createLoan, deleteLoan } from '@/lib/loans'
 import { getApplicationConditions } from '@/lib/conditions'
 import { ApplicationConditions } from '@/components/dashboard/application-conditions'
-import type { LoanApplication, Loan, ApplicationCondition } from '@/types'
+import type { LoanApplicationWithBorrower, Loan, ApplicationCondition } from '@/types'
 import { 
   ArrowLeft, 
   User, 
@@ -45,11 +45,11 @@ export default function ViewApplicationPage() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [application, setApplication] = useState<LoanApplication | null>(null)
+  const [application, setApplication] = useState<LoanApplicationWithBorrower | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [dscrData, setDscrData] = useState<any>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [editedApplication, setEditedApplication] = useState<LoanApplication | null>(null)
+  const [editedApplication, setEditedApplication] = useState<LoanApplicationWithBorrower | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [loans, setLoans] = useState<Loan[]>([])
   const [isLoadingLoans, setIsLoadingLoans] = useState(false)
@@ -150,7 +150,7 @@ export default function ViewApplicationPage() {
     loadApplication()
     loadLoans()
     loadConditions()
-  }, [applicationId])
+  }, [applicationId, router])
 
   // Handle returning from DSCR calculator with loan data
   useEffect(() => {
@@ -168,11 +168,14 @@ export default function ViewApplicationPage() {
         const handleAddLoanFromDSCR = async () => {
           try {
             const parsedDscrData = JSON.parse(dscrData)
+            console.log('Parsed DSCR data:', parsedDscrData)
             const loanName = `DSCR Loan - ${parsedDscrData.property_state || 'Property'}`
             const { createLoanFromDscrData } = await import('@/lib/loans')
             const loanData = createLoanFromDscrData(parsedDscrData, loanName)
+            console.log('Created loan data:', loanData)
             
             const { loan, error } = await createLoan(applicationId, loanData)
+            console.log('Loan creation result:', { loan, error })
             
             if (error) {
               toast.error(error)
@@ -252,7 +255,7 @@ export default function ViewApplicationPage() {
     setEditedApplication(null)
   }
 
-  const handleFieldChange = (field: keyof LoanApplication, value: any) => {
+  const handleFieldChange = (field: keyof LoanApplicationWithBorrower, value: any) => {
     if (!editedApplication) return
     setEditedApplication(prev => prev ? { ...prev, [field]: value } : null)
   }
@@ -294,11 +297,14 @@ export default function ViewApplicationPage() {
     }
 
     try {
+      console.log('handleAddLoan - dscrData:', dscrData)
       const loanName = `DSCR Loan - ${dscrData.property_state || 'Property'}`
       const { createLoanFromDscrData } = await import('@/lib/loans')
       const loanData = createLoanFromDscrData(dscrData, loanName)
+      console.log('handleAddLoan - created loan data:', loanData)
       
       const { loan, error } = await createLoan(applicationId, loanData)
+      console.log('handleAddLoan - loan creation result:', { loan, error })
       
       if (error) {
         toast.error(error)
@@ -312,6 +318,39 @@ export default function ViewApplicationPage() {
     } catch (error) {
       console.error('Error adding loan:', error)
       toast.error('Failed to add loan')
+    }
+  }
+
+  const handleCreateNewLoan = async () => {
+    try {
+      const loanName = `New Loan - ${application?.first_name} ${application?.last_name}`
+      const loanData = {
+        loan_name: loanName,
+        loan_type: 'Conventional',
+        loan_objective: 'purchase' as const,
+        property_address: application?.property_address || '',
+        property_type: application?.property_type || '',
+        property_state: application?.property_state || '',
+        loan_amount: 0,
+        interest_rate: 0,
+        loan_term_years: 30,
+        notes: 'Created manually'
+      }
+      
+      const { loan, error } = await createLoan(applicationId, loanData)
+      
+      if (error) {
+        toast.error(error)
+        return
+      }
+
+      if (loan) {
+        setLoans(prev => [loan, ...prev])
+        toast.success('New loan created successfully!')
+      }
+    } catch (error) {
+      console.error('Error creating new loan:', error)
+      toast.error('Failed to create new loan')
     }
   }
 
@@ -841,7 +880,7 @@ export default function ViewApplicationPage() {
                   />
                 ) : (
                   <p className="text-base font-medium visto-dark-blue">
-                    {application.total_income > 0 ? formatCurrency(application.total_income) : 'No income information provided'}
+                    {application.total_income && application.total_income > 0 ? formatCurrency(application.total_income) : 'No income information provided'}
                   </p>
                 )}
               </div>
@@ -858,7 +897,7 @@ export default function ViewApplicationPage() {
                   />
                 ) : (
                   <p className="text-base font-medium visto-dark-blue">
-                    {application.total_assets > 0 ? formatCurrency(application.total_assets) : 'No asset information provided'}
+                    {application.total_assets && application.total_assets > 0 ? formatCurrency(application.total_assets) : 'No asset information provided'}
                   </p>
                 )}
               </div>
@@ -930,7 +969,7 @@ export default function ViewApplicationPage() {
               )}
 
               {/* Show DSCR financial data if available */}
-              {dscrData && (application.total_income <= 0 || application.total_assets <= 0) && (
+              {dscrData && ((application.total_income || 0) <= 0 || (application.total_assets || 0) <= 0) && (
                 <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center gap-2">
                     <Calculator className="h-4 w-4 text-blue-600" />

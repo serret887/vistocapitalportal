@@ -9,99 +9,145 @@ import { Badge } from '@/components/ui/badge'
 import { ApplicationsTable } from '@/components/dashboard/applications-table'
 import { EnhancedApplicationForm } from '@/components/dashboard/enhanced-application-form'
 import { getDashboardStats, getLoanApplications, deleteLoanApplication } from '@/lib/loan-applications'
-import type { DashboardStats, LoanApplication, LoanApplicationStatus } from '@/types'
+import type { DashboardStats, LoanApplicationWithBorrower, LoanApplicationStatus } from '@/types'
 import { Plus, Users, TrendingUp, DollarSign, FileText } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
+
+// Generate a unique request ID for this component instance
+const generateRequestId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
 export default function DashboardPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [applications, setApplications] = useState<LoanApplication[]>([])
+  const [applications, setApplications] = useState<LoanApplicationWithBorrower[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showApplicationForm, setShowApplicationForm] = useState(false)
+  const requestId = generateRequestId()
+
+  console.log(`[${requestId}] DashboardPage component initialized`)
 
   // Check for query parameter to show application form
   useEffect(() => {
     const shouldShowForm = searchParams.get('showApplicationForm') === 'true'
+    console.log(`[${requestId}] Checking search params for application form`, {
+      shouldShowForm,
+      searchParams: Object.fromEntries(searchParams.entries())
+    })
     if (shouldShowForm) {
+      console.log(`[${requestId}] Setting showApplicationForm to true`)
       setShowApplicationForm(true)
     }
-  }, [searchParams])
+  }, [searchParams, requestId])
 
   const loadDashboardData = useCallback(async () => {
+    console.log(`[${requestId}] Loading dashboard data`)
     setIsLoading(true)
     try {
       // Load both stats and applications
+      console.log(`[${requestId}] Fetching dashboard stats and applications`)
       const [statsResult, applicationsResult] = await Promise.all([
         getDashboardStats(),
         getLoanApplications()
       ])
       
+      console.log(`[${requestId}] Dashboard stats result`, {
+        hasError: !!statsResult.error,
+        error: statsResult.error,
+        hasStats: !!statsResult.stats
+      })
+      
       if (statsResult.error) {
         if (statsResult.error.includes('Authentication required')) {
+          console.log(`[${requestId}] Authentication required, redirecting to login`)
           toast.error('Please log in to access the dashboard')
           router.push('/login')
           return
         } else if (statsResult.error.includes('Onboarding required')) {
+          console.log(`[${requestId}] Onboarding required, redirecting to onboarding`)
           // User needs to complete onboarding, redirect them
           router.push('/onboarding')
           return
         } else {
+          console.log(`[${requestId}] Dashboard stats error`, { error: statsResult.error })
           toast.error(`Failed to load dashboard stats: ${statsResult.error}`)
         }
         console.error('Dashboard stats error:', statsResult.error)
       } else {
+        console.log(`[${requestId}] Setting dashboard stats`, {
+          statsCount: statsResult.stats ? Object.keys(statsResult.stats).length : 0
+        })
         setStats(statsResult.stats)
       }
 
+      console.log(`[${requestId}] Applications result`, {
+        hasError: !!applicationsResult.error,
+        error: applicationsResult.error,
+        applicationsCount: applicationsResult.applications?.length || 0
+      })
+
       if (applicationsResult.error) {
         if (applicationsResult.error.includes('Authentication required')) {
+          console.log(`[${requestId}] Authentication required for applications, redirecting to login`)
           toast.error('Please log in to access applications')
           router.push('/login')
           return
         } else if (applicationsResult.error.includes('Onboarding required')) {
+          console.log(`[${requestId}] Onboarding required for applications, redirecting to onboarding`)
           // User needs to complete onboarding, redirect them
           router.push('/onboarding')
           return
         } else {
+          console.log(`[${requestId}] Applications error`, { error: applicationsResult.error })
           toast.error(`Failed to load applications: ${applicationsResult.error}`)
         }
         console.error('Applications error:', applicationsResult.error)
       } else {
+        console.log(`[${requestId}] Setting applications`, {
+          count: applicationsResult.applications?.length || 0
+        })
         setApplications(applicationsResult.applications || [])
       }
     } catch (error) {
-      console.error('Unexpected error loading dashboard:', error)
+      console.error(`[${requestId}] Unexpected error loading dashboard:`, error)
       toast.error('An unexpected error occurred')
     } finally {
       setIsLoading(false)
+      console.log(`[${requestId}] Dashboard data loading completed`)
     }
-  }, [router])
+  }, [router, requestId])
 
   useEffect(() => {
+    console.log(`[${requestId}] Dashboard useEffect triggered`)
     loadDashboardData()
   }, [loadDashboardData])
 
   const handleStatusClick = useCallback((status: LoanApplicationStatus) => {
+    console.log(`[${requestId}] Status clicked`, { status })
     // Future: Navigate to filtered view of applications by status
     console.log(`Clicked on ${status} status`)
     toast.info(`Viewing ${status} applications - Coming soon!`)
-  }, [])
+  }, [requestId])
 
   const handleApplicationSuccess = useCallback(() => {
+    console.log(`[${requestId}] Application created successfully`)
     setShowApplicationForm(false)
     loadDashboardData() // Refresh data after new application
     toast.success('Application created successfully!')
-  }, [loadDashboardData])
+  }, [loadDashboardData, requestId])
 
-  const handleViewApplication = useCallback((application: LoanApplication) => {
+  const handleViewApplication = useCallback((application: LoanApplicationWithBorrower) => {
+    console.log(`[${requestId}] Viewing application`, {
+      applicationId: application.id,
+      borrowerName: application.first_name,
+      status: application.status
+    })
     // Navigate to the view application page
     router.push(`/dashboard/applications/${application.id}`)
-  }, [router])
+  }, [router, requestId])
 
-  const handleDeleteApplication = useCallback(async (application: LoanApplication) => {
+  const handleDeleteApplication = useCallback(async (application: LoanApplicationWithBorrower) => {
     if (!confirm(`Are you sure you want to delete the application for ${application.first_name} ${application.last_name}?`)) {
       return
     }

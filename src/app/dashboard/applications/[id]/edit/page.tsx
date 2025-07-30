@@ -7,14 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { getLoanApplication } from '@/lib/loan-applications'
 import { EnhancedApplicationForm } from '@/components/dashboard/enhanced-application-form'
-import type { LoanApplication, LoanObjective } from '@/types'
+import type { LoanApplicationWithBorrower, LoanObjective } from '@/types'
 import { ArrowLeft, Edit, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function EditApplicationPage() {
   const params = useParams()
   const router = useRouter()
-  const [application, setApplication] = useState<LoanApplication | null>(null)
+  const [application, setApplication] = useState<LoanApplicationWithBorrower | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
 
@@ -125,16 +125,25 @@ export default function EditApplicationPage() {
               onSuccess={handleEditSuccess}
               onCancel={handleEditCancel}
               initialData={{
-                ...application,
+                first_name: application.first_name || '',
+                last_name: application.last_name || '',
                 email: application.email || '',
                 phone_number: application.phone_number || '',
                 ssn: application.ssn || '',
                 date_of_birth: application.date_of_birth || '',
                 property_address: application.property_address || '',
+                property_is_tbd: application.property_is_tbd || false,
                 property_type: application.property_type || '',
                 current_residence: application.current_residence || '',
                 loan_objective: (application.loan_objective as LoanObjective) || 'purchase',
-                loan_type: application.loan_type || ''
+                loan_type: application.loan_type || '',
+                total_income: application.total_income || 0,
+                income_sources: application.income_sources || [],
+                income_documents: [],
+                total_assets: application.total_assets || 0,
+                bank_accounts: application.bank_accounts || [],
+                bank_statements: [],
+                notes: application.notes
               }}
               isEditing={true}
             />

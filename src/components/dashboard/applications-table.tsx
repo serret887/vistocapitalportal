@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { LoanApplication, LoanApplicationStatus } from '@/types'
+import type { LoanApplicationWithBorrower, LoanApplicationStatus } from '@/types'
 import { LOAN_STATUS_LABELS, LOAN_STATUS_COLORS } from '@/types'
 import { CalendarIcon, Search, Filter, Download, Eye, Trash2, FileText } from 'lucide-react'
 import { format } from 'date-fns'
@@ -24,10 +24,10 @@ import { cn } from '@/lib/utils'
 import type { DateRange } from 'react-day-picker'
 
 interface ApplicationsTableProps {
-  applications: LoanApplication[]
+  applications: LoanApplicationWithBorrower[]
   isLoading?: boolean
-  onViewApplication?: (application: LoanApplication) => void
-  onDeleteApplication?: (application: LoanApplication) => void
+  onViewApplication?: (application: LoanApplicationWithBorrower) => void
+  onDeleteApplication?: (application: LoanApplicationWithBorrower) => void
   onExportData?: () => void
 }
 
@@ -51,8 +51,8 @@ export function ApplicationsTable({
       // Search term filter (name, email, address)
       const searchText = searchTerm.toLowerCase()
       const matchesSearch = !searchTerm || 
-        app.first_name.toLowerCase().includes(searchText) ||
-        app.last_name.toLowerCase().includes(searchText) ||
+        (app.first_name?.toLowerCase().includes(searchText) || false) ||
+        (app.last_name?.toLowerCase().includes(searchText) || false) ||
         app.email?.toLowerCase().includes(searchText) ||
         app.property_address?.toLowerCase().includes(searchText)
 
@@ -76,8 +76,8 @@ export function ApplicationsTable({
       let bValue: any
 
       if (sortBy === 'name') {
-        aValue = `${a.first_name} ${a.last_name}`
-        bValue = `${b.first_name} ${b.last_name}`
+        aValue = `${a.first_name || ''} ${a.last_name || ''}`
+        bValue = `${b.first_name || ''} ${b.last_name || ''}`
       } else if (sortBy === 'created_at') {
         aValue = new Date(a.created_at).getTime()
         bValue = new Date(b.created_at).getTime()
@@ -371,7 +371,7 @@ export function ApplicationsTable({
                     </TableCell>
                     
                     <TableCell>
-                      {application.total_income > 0 && (
+                      {application.total_income && application.total_income > 0 && (
                         <div className="text-sm font-medium">
                           {formatCurrency(application.total_income)}
                         </div>
@@ -379,7 +379,7 @@ export function ApplicationsTable({
                     </TableCell>
                     
                     <TableCell>
-                      {application.total_assets > 0 && (
+                      {application.total_assets && application.total_assets > 0 && (
                         <div className="text-sm font-medium">
                           {formatCurrency(application.total_assets)}
                         </div>

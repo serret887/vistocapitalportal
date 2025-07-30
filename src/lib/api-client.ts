@@ -19,12 +19,14 @@ class ApiClient {
   private async getAuthHeaders(): Promise<HeadersInit> {
     // Get token from localStorage or sessionStorage
     const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token')
-    console.log('getAuthHeaders: Token found:', !!token)
+    
+    const requestId = this.generateRequestId()
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       'X-Client-Version': '1.0.0',
-      'X-Request-ID': this.generateRequestId(),
+      'X-Request-ID': requestId,
+      'x-correlation-id': requestId,
     }
     
     if (token) {
@@ -42,9 +44,23 @@ class ApiClient {
     try {
       const result = await response.json()
       
+      // Log response with correlation ID
+      const correlationId = response.headers.get('x-correlation-id') || requestId
+      console.log(`[${correlationId}] API Response: ${response.status}`, {
+        url: response.url,
+        status: response.status,
+        hasData: !!result.data,
+        hasError: !!result.error
+      })
+      
       if (!response.ok) {
         // Return the actual server error message
         const serverError = result.error || result.message || result.detail || `HTTP ${response.status}`
+        
+        console.log(`[${correlationId}] API Error: ${serverError}`, {
+          status: response.status,
+          url: response.url
+        })
         
         // Handle authentication errors specially
         if (response.status === 401) {
@@ -103,72 +119,62 @@ class ApiClient {
     const {
       method = 'GET',
       body,
-      headers: customHeaders = {},
+      headers: additionalHeaders = {},
       isFormData = false,
-      timeout = 10000,
+      timeout = 30000,
       retries = 3
     } = options
 
     const requestId = this.generateRequestId()
+    
+    // Log the request
+    console.log(`[${requestId}] API Request: ${method} ${endpoint}`, {
+      hasBody: !!body,
+      isFormData,
+      timeout,
+      retries
+    })
 
     return this.retryRequest(async () => {
-      try {
-        const authHeaders = await this.getAuthHeaders()
-        
-        let requestHeaders: HeadersInit = {
+      const authHeaders = await this.getAuthHeaders()
+      
+      const requestOptions: RequestInit = {
+        method,
+        headers: {
           ...authHeaders,
-          ...customHeaders
-        }
+          ...additionalHeaders,
+        },
+        signal: AbortSignal.timeout(timeout),
+      }
 
-        // Remove Content-Type for FormData requests
+      if (body) {
         if (isFormData) {
-          const { 'Content-Type': _, ...headersWithoutContentType } = requestHeaders as Record<string, string>
-          requestHeaders = headersWithoutContentType
+          requestOptions.body = body
+          // Remove Content-Type for FormData to let browser set it
+          delete (requestOptions.headers as any)['Content-Type']
+        } else {
+          requestOptions.body = JSON.stringify(body)
         }
+      }
 
-        const requestOptions: RequestInit = {
-          method,
-          headers: requestHeaders,
-        }
-
-        if (body) {
-          if (isFormData) {
-            requestOptions.body = body
-          } else {
-            requestOptions.body = JSON.stringify(body)
-          }
-        }
-
-
-
-        // Create abort controller for timeout
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), timeout)
-
-        const response = await fetch(`${API_BASE}${endpoint}`, {
-          ...requestOptions,
-          signal: controller.signal
-        })
-
-        clearTimeout(timeoutId)
-
+      const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`
+      
+      try {
+        const response = await fetch(url, requestOptions)
         return await this.handleApiResponse<T>(response, requestId)
       } catch (error) {
-        if (error instanceof Error && error.name === 'AbortError') {
-          throw new Error('Request timeout')
-        }
+        console.error(`[${requestId}] API Request failed:`, error)
         throw error
       }
     }, retries)
   }
 
-  // Convenience methods for common HTTP methods
+  // Convenience methods
   async get<T>(endpoint: string, options?: { timeout?: number; retries?: number }): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, { method: 'GET', ...options })
   }
 
   async post<T>(endpoint: string, body: any, options?: { timeout?: number; retries?: number }): Promise<ApiResponse<T>> {
-    console.log(`apiClient.post: Making POST request to ${endpoint}`)
     return this.request<T>(endpoint, { method: 'POST', body, ...options })
   }
 
@@ -184,7 +190,6 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'DELETE', ...options })
   }
 
-  // File upload method with progress tracking
   async uploadFile<T>(
     endpoint: string,
     formData: FormData,
@@ -201,12 +206,50 @@ class ApiClient {
       ...options
     })
   }
-
-
 }
 
-// Create and export a singleton instance
+// Export singleton instance
 export const apiClient = new ApiClient()
 
-// Export the class for testing purposes
-export { ApiClient } 
+// Convenience functions for common operations
+export const api = {
+  // Auth endpoints
+  signIn: (email: string, password: string) => 
+    apiClient.post('/auth/signin', { email, password }),
+  
+  signUp: (userData: any) => 
+    apiClient.post('/auth/signup', userData),
+  
+  getCurrentUser: () => 
+    apiClient.get('/auth/me'),
+  
+  signOut: () => 
+    apiClient.post('/auth/signout', {}),
+
+  // Application endpoints
+  getApplications: () => 
+    apiClient.get('/applications'),
+  
+  getApplication: (id: string) => 
+    apiClient.get(`/applications/${id}`),
+  
+  createApplication: (data: any) => 
+    apiClient.post('/applications', data),
+  
+  updateApplication: (id: string, data: any) => 
+    apiClient.put(`/applications/${id}`, data),
+  
+  deleteApplication: (id: string) => 
+    apiClient.delete(`/applications/${id}`),
+
+  // File upload
+  uploadFile: (file: File, onProgress?: (progress: number) => void) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiClient.uploadFile('/upload', formData, { onProgress })
+  },
+
+  // Health check
+  health: () => 
+    apiClient.get('/health'),
+} 

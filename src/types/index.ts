@@ -24,7 +24,6 @@ export interface PartnerProfile {
   license_state?: string
   onboarded: boolean
   created_at: string
-  updated_at: string
 }
 
 export interface OnboardingFormData {
@@ -164,30 +163,19 @@ export interface BankStatement {
 
 export interface LoanApplication {
   id: string
-  partner_id: string
-  first_name: string
-  last_name: string
-  email?: string
-  phone_number?: string
-  ssn?: string
-  date_of_birth?: string
-  property_address?: string
-  property_is_tbd: boolean
-  property_type?: string
-  current_residence?: string
-  loan_objective?: string
-  loan_type?: string
-  total_income: number
-  income_sources: IncomeSource[]
-  income_documents: IncomeDocument[]
-  total_assets: number
-  bank_accounts: BankAccount[]
-  bank_statements: (BankStatement | File)[]
+  user_id: string
+  
+  // Application-level fields
+  application_name?: string
+  application_type?: string
+  notes?: string
+  
+  // Status and timestamps
   status: string
   created_at: string
   updated_at: string
-
-  // DSCR Calculator Data
+  
+  // Legacy fields for backward compatibility (these should be moved to loans table)
   dscr_data?: any
   estimated_home_value?: number
   loan_amount?: number
@@ -203,8 +191,6 @@ export interface LoanApplication {
   broker_ysp?: number
   selected_loan_product?: any
   dscr_results?: any
-
-  // Additional DSCR Fields
   fico_score_range?: string
   prepayment_penalty?: string
   discount_points?: number
@@ -235,6 +221,29 @@ export interface LoanApplication {
   property_recording_fees?: number
   property_transfer_taxes?: number
   property_other_costs?: number
+}
+
+// Extended interface that includes borrower data for backward compatibility
+export interface LoanApplicationWithBorrower extends LoanApplication {
+  // Borrower information (from clients table)
+  first_name?: string
+  last_name?: string
+  email?: string
+  phone_number?: string
+  ssn?: string
+  date_of_birth?: string
+  current_residence?: string
+  total_income?: number
+  income_sources?: any[]
+  total_assets?: number
+  bank_accounts?: any[]
+  
+  // Property information (from loans table)
+  property_address?: string
+  property_is_tbd?: boolean
+  property_type?: string
+  loan_objective?: string
+  loan_type?: string
 }
 
 export interface Loan {
@@ -345,6 +354,7 @@ export interface LoanApplicationFormData {
   total_assets: number
   bank_accounts: BankAccount[]
   bank_statements: (BankStatement | File)[]
+  notes?: string
 }
 
 export interface LoanFormData {
@@ -459,4 +469,129 @@ export interface ConditionActivity {
 
 export interface ValidationErrors {
   [key: string]: string
-} 
+}
+
+// =====================================================
+// NEW BORROWER & COMPANY TYPES
+// =====================================================
+
+export interface Borrower {
+  id: string
+  first_name: string
+  last_name: string
+  email?: string
+  phone_number?: string
+  ssn?: string
+  date_of_birth?: string
+  current_residence?: string
+  total_income: number
+  income_sources: IncomeSource[]
+  income_documents: IncomeDocument[]
+  total_assets: number
+  bank_accounts: BankAccount[]
+  bank_statements: (BankStatement | File)[]
+  created_at: string
+  updated_at: string
+}
+
+export interface Company {
+  id: string
+  company_name: string
+  company_type?: string // 'LLC', 'Corporation', 'Partnership', 'Sole Proprietorship'
+  ein?: string // Employer Identification Number
+  business_address?: string
+  business_phone?: string
+  business_email?: string
+  industry?: string
+  years_in_business?: number
+  annual_revenue?: number
+  number_of_employees?: number
+  created_at: string
+  updated_at: string
+}
+
+export interface BorrowerApplication {
+  id: string
+  borrower_id: string
+  application_id: string
+  borrower_role: 'primary' | 'co_borrower' | 'guarantor'
+  created_at: string
+}
+
+export interface BorrowerCompany {
+  id: string
+  borrower_id: string
+  company_id: string
+  ownership_percentage?: number // 0-100
+  role_in_company?: string // 'Owner', 'Partner', 'Manager', 'Employee'
+  created_at: string
+}
+
+// =====================================================
+// UPDATED APPLICATION FORM DATA (BORROWER-FOCUSED)
+// =====================================================
+
+export interface BorrowerFormData {
+  // Personal Information
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  ssn: string
+  date_of_birth: string
+  current_residence: string
+  
+  // Income Information
+  total_income: number
+  income_sources: IncomeSource[]
+  income_documents: IncomeDocument[]
+  
+  // Assets Information
+  total_assets: number
+  bank_accounts: BankAccount[]
+  bank_statements: (BankStatement | File)[]
+  
+  // Company Information (optional)
+  has_company: boolean
+  company?: CompanyFormData
+}
+
+export interface CompanyFormData {
+  company_name: string
+  company_type?: string
+  ein?: string
+  business_address?: string
+  business_phone?: string
+  business_email?: string
+  industry?: string
+  years_in_business?: number
+  annual_revenue?: number
+  number_of_employees?: number
+  ownership_percentage?: number
+  role_in_company?: string
+}
+
+export interface ApplicationFormData {
+  // Application-level information
+  application_name: string
+  application_type: 'loan_application' | 'refinance_application'
+  notes?: string
+  
+  // Borrowers (can have multiple)
+  borrowers: BorrowerFormData[]
+  
+  // Primary borrower is always first in the array
+  primary_borrower: BorrowerFormData
+}
+
+// =====================================================
+// UPDATED LOAN APPLICATION TYPE
+// =====================================================
+
+
+
+// =====================================================
+// DEPRECATED - KEEPING FOR BACKWARD COMPATIBILITY
+// =====================================================
+
+ 

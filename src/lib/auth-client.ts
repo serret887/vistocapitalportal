@@ -34,7 +34,6 @@ export interface PartnerProfile {
   license_state: string | null
   onboarded: boolean
   created_at: string
-  updated_at: string
 }
 
 // Client-side authentication functions that work through the API
@@ -130,6 +129,22 @@ export async function getPartnerProfile(userId: string) {
   } catch (error) {
     console.error('Error getting partner profile:', error)
     return { profile: null, error: error as Error }
+  }
+}
+
+// Check if user has completed onboarding
+export async function hasCompletedOnboarding() {
+  try {
+    const response = await apiClient.get<{ onboarded: boolean }>('/auth/onboarding-status')
+    
+    if (response.error) {
+      return { onboarded: false, error: new Error(response.error) }
+    }
+
+    return { onboarded: response.data?.onboarded || false, error: null }
+  } catch (error) {
+    console.error('Error checking onboarding status:', error)
+    return { onboarded: false, error: error as Error }
   }
 }
 

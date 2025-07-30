@@ -36,7 +36,10 @@ export async function getLoan(applicationId: string, loanId: string): Promise<{ 
 // Create a new loan
 export async function createLoan(applicationId: string, loanData: LoanFormData): Promise<{ loan: Loan | null; error?: string }> {
   try {
+    console.log('createLoan - applicationId:', applicationId)
+    console.log('createLoan - loanData:', loanData)
     const response = await apiClient.post<{ loan: Loan }>(`/applications/${applicationId}/loans`, loanData)
+    console.log('createLoan - API response:', response)
     
     if (response.error) {
       return { loan: null, error: response.error }

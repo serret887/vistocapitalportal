@@ -12,6 +12,9 @@ import { useRouter } from "next/navigation"
 import { signUp, getCurrentUser } from "@/lib/auth-client"
 import { toast } from "sonner"
 
+// Generate a unique request ID for this component instance
+const generateRequestId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
 export function SignupForm({
   className,
   ...props
@@ -25,9 +28,18 @@ export function SignupForm({
     confirmPassword: ''
   })
   const router = useRouter()
+  const requestId = generateRequestId()
+
+  console.log(`[${requestId}] SignupForm component initialized`)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
+    console.log(`[${requestId}] Input change: ${name}`, {
+      hasValue: !!value,
+      valueLength: value.length,
+      isPassword: name === 'password' || name === 'confirmPassword',
+      isEmail: name === 'email'
+    })
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -35,63 +47,99 @@ export function SignupForm({
   }
 
   const validateForm = () => {
+    console.log(`[${requestId}] Validating signup form`, {
+      hasFirstName: !!formData.firstName.trim(),
+      hasLastName: !!formData.lastName.trim(),
+      hasEmail: !!formData.email.trim(),
+      hasPassword: !!formData.password,
+      hasConfirmPassword: !!formData.confirmPassword,
+      passwordLength: formData.password.length,
+      passwordsMatch: formData.password === formData.confirmPassword
+    })
+
     if (!formData.firstName.trim()) {
+      console.log(`[${requestId}] Validation failed: First name is required`)
       toast.error('First name is required')
       return false
     }
     if (!formData.lastName.trim()) {
+      console.log(`[${requestId}] Validation failed: Last name is required`)
       toast.error('Last name is required')
       return false
     }
     if (!formData.email.trim()) {
+      console.log(`[${requestId}] Validation failed: Email is required`)
       toast.error('Email is required')
       return false
     }
     if (!formData.password) {
+      console.log(`[${requestId}] Validation failed: Password is required`)
       toast.error('Password is required')
       return false
     }
     if (formData.password.length < 6) {
+      console.log(`[${requestId}] Validation failed: Password too short`, {
+        passwordLength: formData.password.length
+      })
       toast.error('Password must be at least 6 characters')
       return false
     }
     if (formData.password !== formData.confirmPassword) {
+      console.log(`[${requestId}] Validation failed: Passwords do not match`)
       toast.error('Passwords do not match')
       return false
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) {
+      console.log(`[${requestId}] Validation failed: Invalid email format`, {
+        email: `${formData.email.substring(0, 3)}***@${formData.email.split('@')[1]}`
+      })
       toast.error('Please enter a valid email address')
       return false
     }
 
+    console.log(`[${requestId}] Form validation passed`)
     return true
   }
 
   const waitForSession = async (maxAttempts = 10): Promise<boolean> => {
+    console.log(`[${requestId}] Waiting for session establishment`)
     for (let i = 0; i < maxAttempts; i++) {
       const { user, error } = await getCurrentUser()
       if (user && !error) {
-        console.log('Session established successfully')
+        console.log(`[${requestId}] Session established successfully on attempt ${i + 1}`)
         return true
       }
-      console.log(`Session attempt ${i + 1}/${maxAttempts} - waiting...`)
+      console.log(`[${requestId}] Session attempt ${i + 1}/${maxAttempts} - waiting...`)
       await new Promise(resolve => setTimeout(resolve, 500)) // Wait 500ms between attempts
     }
+    console.log(`[${requestId}] Session establishment failed after ${maxAttempts} attempts`)
     return false
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    console.log(`[${requestId}] Signup form submitted`, {
+      hasFirstName: !!formData.firstName,
+      hasLastName: !!formData.lastName,
+      hasEmail: !!formData.email,
+      hasPassword: !!formData.password,
+      hasConfirmPassword: !!formData.confirmPassword,
+      emailPreview: formData.email ? `${formData.email.substring(0, 3)}***@${formData.email.split('@')[1]}` : null
+    })
+    
     if (!validateForm()) {
+      console.log(`[${requestId}] Form validation failed, aborting signup`)
       return
     }
 
     setIsLoading(true)
+    console.log(`[${requestId}] Starting signup process`)
 
     try {
+      console.log(`[${requestId}] Calling signUp API`)
       const { user, error } = await signUp({
         email: formData.email,
         password: formData.password,
@@ -100,34 +148,48 @@ export function SignupForm({
       })
 
       if (error) {
+        console.log(`[${requestId}] Signup failed`, {
+          error: error.message,
+          errorName: error.name || 'unknown'
+        })
         toast.error(error.message || 'Failed to create account')
         return
       }
 
       if (user) {
-        toast.success('Account created successfully! Setting up your session...')
+        console.log(`[${requestId}] Signup successful`, {
+          userId: user.id,
+          userEmail: user.email,
+          hasFirstName: !!user.firstName,
+          hasLastName: !!user.lastName
+        })
+        toast.success('Account created successfully! Please sign in.')
         
         // Wait for session to be established
+        console.log(`[${requestId}] Waiting for session establishment`)
         const sessionEstablished = await waitForSession()
         
         if (sessionEstablished) {
-          toast.success('Session established! Redirecting to onboarding...')
-          // Small delay to ensure everything is ready
-          setTimeout(() => {
-        router.push('/onboarding')
-          }, 1000)
+          console.log(`[${requestId}] Session established, redirecting to dashboard`)
+          window.location.href = '/dashboard'
         } else {
-          toast.error('Session setup failed. Please try logging in manually.')
-          router.push('/login')
+          console.log(`[${requestId}] Session not established, redirecting to login`)
+          window.location.href = '/login'
         }
+      } else {
+        console.log(`[${requestId}] Signup failed: No user data returned`)
+        toast.error('Account creation failed. Please try again.')
       }
     } catch (error) {
-      console.error('Signup error:', error)
+      console.error(`[${requestId}] Signup error:`, error)
       toast.error('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
+      console.log(`[${requestId}] Signup process completed`)
     }
   }
+
+  console.log(`[${requestId}] Rendering SignupForm`)
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -138,40 +200,36 @@ export function SignupForm({
               <div className="flex flex-col items-center text-center">
                 <h1 className="text-2xl font-bold">Create your account</h1>
                 <p className="text-muted-foreground text-balance">
-                  Get started with Visto Capital - complete onboarding after signup
+                  Join the Visto Capital Partner Portal
                 </p>
               </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    name="firstName"
-                    type="text"
-                    placeholder="John"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    name="lastName"
-                    type="text"
-                    placeholder="Smith"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
+              <div className="grid gap-3">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  placeholder="John"
+                  value={formData.firstName}
+                  onChange={handleInputChange}
+                  required
+                  disabled={isLoading}
+                />
               </div>
-              
-              <div className="grid gap-2">
+              <div className="grid gap-3">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  placeholder="Doe"
+                  value={formData.lastName}
+                  onChange={handleInputChange}
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="grid gap-3">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
@@ -184,8 +242,7 @@ export function SignupForm({
                   disabled={isLoading}
                 />
               </div>
-              
-              <div className="grid gap-2">
+              <div className="grid gap-3">
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
@@ -195,11 +252,9 @@ export function SignupForm({
                   onChange={handleInputChange}
                   required
                   disabled={isLoading}
-                  minLength={6}
                 />
               </div>
-              
-              <div className="grid gap-2">
+              <div className="grid gap-3">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
@@ -211,17 +266,14 @@ export function SignupForm({
                   disabled={isLoading}
                 />
               </div>
-              
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Creating Account...' : 'Create Account & Start Onboarding'}
+                {isLoading ? 'Creating account...' : 'Create Account'}
               </Button>
-              
               <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
                 <span className="bg-card text-muted-foreground relative z-10 px-2">
                   Or continue with
                 </span>
               </div>
-              
               <div className="grid grid-cols-2 gap-4">
                 <Button variant="outline" type="button" className="w-full" disabled={isLoading}>
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -242,17 +294,16 @@ export function SignupForm({
                   <span className="ml-2">Microsoft</span>
                 </Button>
               </div>
-              
               <div className="text-center text-sm">
                 Already have an account?{" "}
                 <Link href="/login" className="underline underline-offset-4">
                   Sign in
                 </Link>
-              </div>
+            </div>
             </div>
           </form>
           <div className="bg-muted relative hidden md:block">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-600 via-teal-600 to-blue-700 opacity-90" />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 opacity-90" />
             <div className="absolute inset-0 flex flex-col justify-center items-center text-white p-8">
               <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center mb-6">
                 <Image 
@@ -263,15 +314,14 @@ export function SignupForm({
                   className="w-12 h-12 rounded-lg"
                 />
               </div>
-              <h2 className="text-2xl font-bold mb-2">Join Visto Capital</h2>
+              <h2 className="text-2xl font-bold mb-2">Visto Capital</h2>
               <p className="text-center text-lg opacity-90 mb-4">
-                Quick signup, then complete your partner profile
+                Join thousands of successful partners
               </p>
               <div className="text-center space-y-2 text-sm opacity-80">
-                <p>✓ Create account in seconds</p>
-                <p>✓ Complete partner onboarding</p>
+                <p>✓ Manage your deals and clients</p>
                 <p>✓ Access exclusive opportunities</p>
-                <p>✓ Start growing your business</p>
+                <p>✓ Track your performance metrics</p>
               </div>
             </div>
           </div>

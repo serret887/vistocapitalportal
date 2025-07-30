@@ -64,15 +64,19 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('POST /api/applications/[id]/loans - Starting loan creation')
     const supabase = createServerSupabaseClient()
     const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
+      console.log('POST /api/applications/[id]/loans - Authentication failed:', userError)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { id: applicationId } = await params
     const loanData = await request.json()
+    console.log('POST /api/applications/[id]/loans - Application ID:', applicationId)
+    console.log('POST /api/applications/[id]/loans - Loan data:', loanData)
 
     // First verify the application belongs to the current user
     const { data: application, error: appError } = await supabase
@@ -82,6 +86,7 @@ export async function POST(
       .single()
 
     if (appError || !application) {
+      console.log('POST /api/applications/[id]/loans - Application not found:', appError)
       return NextResponse.json({ error: 'Application not found' }, { status: 404 })
     }
 
@@ -93,8 +98,14 @@ export async function POST(
       .single()
 
     if (!partnerProfile || application.partner_id !== partnerProfile.id) {
+      console.log('POST /api/applications/[id]/loans - Unauthorized access')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
+
+    console.log('POST /api/applications/[id]/loans - Creating loan with data:', {
+      application_id: applicationId,
+      ...loanData
+    })
 
     // Create the new loan
     const { data: loan, error } = await supabase
@@ -107,9 +118,11 @@ export async function POST(
       .single()
 
     if (error) {
-      console.error('Error creating loan:', error)
+      console.error('POST /api/applications/[id]/loans - Error creating loan:', error)
       return NextResponse.json({ error: 'Failed to create loan' }, { status: 500 })
     }
+
+    console.log('POST /api/applications/[id]/loans - Loan created successfully:', loan)
 
     // Send Slack notification
     try {

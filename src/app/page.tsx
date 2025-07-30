@@ -1,8 +1,39 @@
+'use client'
+
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, CheckCircle, Users, TrendingUp, Shield, Calculator, FileText } from 'lucide-react'
+import { useEffect } from 'react'
+
+// Generate a unique request ID for this component instance
+const generateRequestId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
 export default function HomePage() {
+  const requestId = generateRequestId()
+
+  console.log(`[${requestId}] HomePage component initialized`)
+
+  useEffect(() => {
+    console.log(`[${requestId}] HomePage mounted`)
+    
+    // Track page visit
+    console.log(`[${requestId}] User visited homepage`)
+    
+    return () => {
+      console.log(`[${requestId}] HomePage unmounted`)
+    }
+  }, [requestId])
+
+  const handleSignUpClick = () => {
+    console.log(`[${requestId}] Sign up button clicked`)
+  }
+
+  const handleSignInClick = () => {
+    console.log(`[${requestId}] Sign in button clicked`)
+  }
+
+  console.log(`[${requestId}] Rendering HomePage`)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-visto-light via-white to-visto-light">
       {/* Hero Section */}
@@ -25,13 +56,13 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-                <Link href="/signup">
+                <Link href="/signup" onClick={handleSignUpClick}>
               <Button size="lg" className="px-8 py-4 text-lg bg-visto-gold hover:bg-visto-dark-gold text-white">
                 Sign Up Free
                 <ArrowRight className="ml-2 w-5 h-5" />
                   </Button>
                 </Link>
-                <Link href="/login">
+                <Link href="/login" onClick={handleSignInClick}>
               <Button variant="outline" size="lg" className="px-8 py-4 text-lg border-visto-gold text-visto-gold hover:bg-visto-gold hover:text-white">
                     Sign In
                   </Button>
@@ -125,7 +156,7 @@ export default function HomePage() {
             to grow their business and streamline their operations.
           </p>
           
-          <Link href="/signup">
+          <Link href="/signup" onClick={handleSignUpClick}>
             <Button size="lg" className="px-8 py-4 text-lg bg-white text-visto-dark-blue hover:bg-gray-100">
               Sign Up Free
               <ArrowRight className="ml-2 w-5 h-5" />

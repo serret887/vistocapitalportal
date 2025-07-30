@@ -9,8 +9,11 @@ import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { signIn, hasCompletedOnboarding } from "@/lib/auth-client"
+import { signIn } from "@/lib/auth-client"
 import { toast } from "sonner"
+
+// Generate a unique request ID for this component instance
+const generateRequestId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
 export function LoginForm({
   className,
@@ -22,9 +25,18 @@ export function LoginForm({
     password: ''
   })
   const router = useRouter()
+  const requestId = generateRequestId()
+
+  console.log(`[${requestId}] LoginForm component initialized`)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
+    console.log(`[${requestId}] Input change: ${name}`, {
+      hasValue: !!value,
+      valueLength: value.length,
+      isEmail: name === 'email',
+      isPassword: name === 'password'
+    })
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -32,57 +44,96 @@ export function LoginForm({
   }
 
   const validateForm = () => {
+    console.log(`[${requestId}] Validating form`, {
+      hasEmail: !!formData.email.trim(),
+      hasPassword: !!formData.password,
+      emailLength: formData.email.length,
+      passwordLength: formData.password.length
+    })
+
     if (!formData.email.trim()) {
+      console.log(`[${requestId}] Validation failed: Email is required`)
       toast.error('Email is required')
       return false
     }
     if (!formData.password) {
+      console.log(`[${requestId}] Validation failed: Password is required`)
       toast.error('Password is required')
       return false
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(formData.email)) {
+      console.log(`[${requestId}] Validation failed: Invalid email format`, {
+        email: `${formData.email.substring(0, 3)}***@${formData.email.split('@')[1]}`
+      })
       toast.error('Please enter a valid email address')
       return false
     }
 
+    console.log(`[${requestId}] Form validation passed`)
     return true
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    console.log(`[${requestId}] Login form submitted`, {
+      hasEmail: !!formData.email,
+      hasPassword: !!formData.password,
+      emailPreview: formData.email ? `${formData.email.substring(0, 3)}***@${formData.email.split('@')[1]}` : null
+    })
+    
     if (!validateForm()) {
+      console.log(`[${requestId}] Form validation failed, aborting login`)
       return
     }
 
     setIsLoading(true)
+    console.log(`[${requestId}] Starting login process`)
 
     try {
+      console.log(`[${requestId}] Calling signIn API`)
       const { user, error } = await signIn({
         email: formData.email,
         password: formData.password
       })
 
       if (error) {
+        console.log(`[${requestId}] Login failed`, {
+          error: error.message,
+          errorName: error.name || 'unknown'
+        })
         toast.error(error.message || 'Failed to sign in')
         return
       }
 
       if (user) {
+        console.log(`[${requestId}] Login successful`, {
+          userId: user.id,
+          userEmail: user.email,
+          hasFirstName: !!user.firstName,
+          hasLastName: !!user.lastName
+        })
         toast.success('Signed in successfully!')
         
         // Always redirect to dashboard - middleware will handle onboarding redirects
-        router.push('/dashboard')
+        console.log(`[${requestId}] Redirecting to dashboard`)
+        window.location.href = '/dashboard'
+      } else {
+        console.log(`[${requestId}] Login failed: No user data returned`)
+        toast.error('Login failed. Please try again.')
       }
     } catch (error) {
-      console.error('Login error:', error)
+      console.error(`[${requestId}] Login error:`, error)
       toast.error('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
+      console.log(`[${requestId}] Login process completed`)
     }
   }
+
+  console.log(`[${requestId}] Rendering LoginForm`)
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
