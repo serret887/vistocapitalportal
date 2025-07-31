@@ -71,8 +71,11 @@ CREATE TABLE clients (
   bank_accounts JSONB DEFAULT '[]'::jsonb,
   bank_statements JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT clients_user_email_unique UNIQUE (user_id, email)
 );
+-- Ensures each user can only have one client per email address
+COMMENT ON CONSTRAINT clients_user_email_unique ON clients IS 'Ensures each user can only have one client per email address';
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own clients" ON clients FOR ALL USING (user_id = auth.uid());
 
@@ -91,8 +94,14 @@ CREATE TABLE companies (
   annual_revenue NUMERIC,
   number_of_employees INTEGER,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT companies_user_business_email_unique UNIQUE (user_id, business_email),
+  CONSTRAINT companies_user_ein_unique UNIQUE (user_id, ein)
 );
+-- Ensures each user can only have one company per business email address
+COMMENT ON CONSTRAINT companies_user_business_email_unique ON companies IS 'Ensures each user can only have one company per business email address';
+-- Ensures each user can only have one company per EIN
+COMMENT ON CONSTRAINT companies_user_ein_unique ON companies IS 'Ensures each user can only have one company per EIN';
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own companies" ON companies FOR ALL USING (user_id = auth.uid());
 
