@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
+export const dynamic = 'force-dynamic'
+
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-visto-light via-white to-visto-light flex items-center justify-center">

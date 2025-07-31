@@ -591,6 +591,98 @@ export interface ApplicationFormData {
 
 
 // =====================================================
+// ENHANCED APPLICATION FORM TYPES (CLIENT-FOCUSED)
+// =====================================================
+
+export interface Client {
+  id: string
+  first_name: string
+  last_name: string
+  email?: string
+  phone_number?: string
+  ssn?: string
+  date_of_birth?: string
+  current_residence?: string
+  total_income: number
+  income_sources: IncomeSource[]
+  income_documents: IncomeDocument[]
+  total_assets: number
+  bank_accounts: BankAccount[]
+  bank_statements: (BankStatement | File)[]
+  created_at: string
+  updated_at: string
+}
+
+export interface ClientApplication {
+  id: string
+  client_id: string
+  application_id: string
+  client_role: 'primary' | 'co_client' | 'guarantor'
+  created_at: string
+}
+
+export interface ClientCompany {
+  id: string
+  client_id: string
+  company_id: string
+  ownership_percentage?: number // 0-100
+  role_in_company?: string // 'Owner', 'Partner', 'Manager', 'Employee'
+  created_at: string
+}
+
+export interface ClientFormData {
+  // Personal Information
+  first_name: string
+  last_name: string
+  email: string
+  phone_number: string
+  ssn: string
+  date_of_birth: string
+  current_residence: string
+  
+  // Income Information
+  total_income: number
+  income_sources: IncomeSource[]
+  income_documents: IncomeDocument[]
+  
+  // Assets Information
+  total_assets: number
+  bank_accounts: BankAccount[]
+  bank_statements: (BankStatement | File)[]
+  
+  // Company Information (optional)
+  has_company: boolean
+  company?: CompanyFormData
+}
+
+export interface EnhancedApplicationFormData {
+  // Application-level information
+  application_name: string
+  application_type: 'loan_application' | 'refinance_application'
+  notes?: string
+  
+  // Company Information (if applicable)
+  has_company: boolean
+  company?: CompanyFormData
+  
+  // Clients (can have multiple) - first client is the primary client
+  clients: ClientFormData[]
+}
+
+// =====================================================
+// CLIENT SEARCH TYPES
+// =====================================================
+
+export interface ClientSearchResult {
+  id: string
+  first_name: string
+  last_name: string
+  email?: string
+  phone_number?: string
+  created_at: string
+}
+
+// =====================================================
 // DEPRECATED - KEEPING FOR BACKWARD COMPATIBILITY
 // =====================================================
 

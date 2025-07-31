@@ -12,11 +12,10 @@ import {
   logWithCorrelation 
 } from '@/lib/utils'
 
-// GET /api/applications - Get all applications for the current partner
+// GET /api/applications - Get all applications with loans for the current user
 export async function GET(request: NextRequest) {
   const correlationId = getCorrelationId(request)
   
-  // Log the incoming request
   logRequest(correlationId, request.method, request.url, 
     Object.fromEntries(request.headers.entries()))
 
@@ -26,10 +25,7 @@ export async function GET(request: NextRequest) {
     const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
-      logWithCorrelation(correlationId, 'warn', 'User not authenticated for applications', {
-        error: userError?.message,
-        hasUser: !!user
-      })
+      logWithCorrelation(correlationId, 'warn', 'User not authenticated for applications')
       
       const response = NextResponse.json(
         { error: 'Authentication required' },
@@ -40,92 +36,14 @@ export async function GET(request: NextRequest) {
       return response
     }
 
-    logWithCorrelation(correlationId, 'info', 'User authenticated for applications', {
-      userId: user.id,
-      userEmail: user.email
-    })
-
     const serverSupabase = createServerSupabaseClient()
 
-    // Get partner profile
-    logWithCorrelation(correlationId, 'debug', 'Fetching partner profile')
-    
-    const { data: partnerProfile, error: partnerError } = await serverSupabase
-      .from('partner_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (partnerError) {
-      // If table doesn't exist or no profile found, user needs onboarding
-      if (partnerError.code === '42P01' || partnerError.code === 'PGRST116') {
-        logWithCorrelation(correlationId, 'warn', 'Partner profile not found - onboarding required', {
-          error: partnerError.message,
-          code: partnerError.code
-        })
-        
-        const response = NextResponse.json(
-          { error: 'Onboarding required', needsOnboarding: true },
-          { status: 403 }
-        )
-        response.headers.set('x-correlation-id', correlationId)
-        logResponse(correlationId, 403, 'Onboarding required')
-        return response
-      }
-      
-      logWithCorrelation(correlationId, 'error', 'Partner profile error', {
-        error: partnerError.message,
-        code: partnerError.code
-      })
-      
-      const response = NextResponse.json(
-        { error: 'Partner profile not found' },
-        { status: 404 }
-      )
-      response.headers.set('x-correlation-id', correlationId)
-      logResponse(correlationId, 404, 'Partner profile not found')
-      return response
-    }
-
-    if (!partnerProfile) {
-      logWithCorrelation(correlationId, 'warn', 'No partner profile found - onboarding required')
-      
-      const response = NextResponse.json(
-        { error: 'Onboarding required', needsOnboarding: true },
-        { status: 403 }
-      )
-      response.headers.set('x-correlation-id', correlationId)
-      logResponse(correlationId, 403, 'Onboarding required')
-      return response
-    }
-
-    logWithCorrelation(correlationId, 'debug', 'Partner profile found', {
-      partnerId: partnerProfile.id
-    })
-
-    // Get all applications for this user with related client data
-    logWithCorrelation(correlationId, 'debug', 'Fetching applications from database')
-    
+    // Get all applications for this user with their loans
     const { data: applications, error } = await serverSupabase
       .from('applications')
       .select(`
         *,
-        client_applications!inner(
-          client:clients(
-            id,
-            first_name,
-            last_name,
-            email,
-            phone_number,
-            ssn,
-            date_of_birth,
-            current_residence,
-            total_income,
-            income_sources,
-            total_assets,
-            bank_accounts
-          )
-        )
+        loans (*)
       `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
@@ -150,54 +68,11 @@ export async function GET(request: NextRequest) {
       applicationCount: applications?.length || 0
     })
 
-    // Transform the data to match the expected format
-    const transformedApplications = applications?.map(app => {
-      // Get the first client (primary borrower)
-      const primaryClient = app.client_applications?.[0]?.client
-      
-      if (!primaryClient) {
-        return {
-          ...app,
-          first_name: '',
-          last_name: '',
-          email: '',
-          phone_number: '',
-          ssn: '',
-          date_of_birth: '',
-          current_residence: '',
-          total_income: 0,
-          income_sources: [],
-          total_assets: 0,
-          bank_accounts: []
-        }
-      }
-
-      return {
-        ...app,
-        first_name: primaryClient.first_name || '',
-        last_name: primaryClient.last_name || '',
-        email: primaryClient.email || '',
-        phone_number: primaryClient.phone_number || '',
-        ssn: primaryClient.ssn || '',
-        date_of_birth: primaryClient.date_of_birth || '',
-        current_residence: primaryClient.current_residence || '',
-        total_income: primaryClient.total_income || 0,
-        income_sources: primaryClient.income_sources || [],
-        total_assets: primaryClient.total_assets || 0,
-        bank_accounts: primaryClient.bank_accounts || []
-      }
-    }) || []
-
-    const response = NextResponse.json(transformedApplications)
+    const response = NextResponse.json(applications || [])
     response.headers.set('x-correlation-id', correlationId)
-    
-    logWithCorrelation(correlationId, 'info', 'Applications returned successfully', {
-      userId: user.id,
-      applicationCount: transformedApplications.length
-    })
-    
     logResponse(correlationId, 200, 'Applications fetched successfully')
     return response
+
   } catch (error) {
     logError(correlationId, error as Error, { endpoint: '/api/applications GET' })
     

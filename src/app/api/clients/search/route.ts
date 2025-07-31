@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUser, createServerSupabaseClient } from '@/lib/auth'
-import type { DashboardStats, LoanApplicationStatus } from '@/types'
+import type { ClientSearchResult } from '@/types'
 import { 
   getCorrelationId, 
   logRequest, 
@@ -10,7 +10,7 @@ import {
   logWithCorrelation 
 } from '@/lib/utils'
 
-// GET /api/dashboard/stats - Get dashboard statistics
+// GET /api/clients/search - Search clients with RBA
 export async function GET(request: NextRequest) {
   const correlationId = getCorrelationId(request)
   
@@ -19,12 +19,12 @@ export async function GET(request: NextRequest) {
     Object.fromEntries(request.headers.entries()))
 
   try {
-    logWithCorrelation(correlationId, 'info', 'Getting dashboard stats for user')
+    logWithCorrelation(correlationId, 'info', 'Searching clients for user')
     
     const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
-      logWithCorrelation(correlationId, 'warn', 'User not authenticated for dashboard stats', {
+      logWithCorrelation(correlationId, 'warn', 'User not authenticated for client search', {
         error: userError?.message,
         hasUser: !!user
       })
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       return response
     }
 
-    logWithCorrelation(correlationId, 'info', 'User authenticated for dashboard stats', {
+    logWithCorrelation(correlationId, 'info', 'User authenticated for client search', {
       userId: user.id,
       userEmail: user.email
     })
@@ -101,77 +101,83 @@ export async function GET(request: NextRequest) {
       partnerId: partnerProfile.id
     })
 
-    // Get client and company counts
-    logWithCorrelation(correlationId, 'debug', 'Fetching clients and companies from database')
-    
-    const [clientsResult, companiesResult] = await Promise.all([
-      serverSupabase
-        .from('clients')
-        .select('id')
-        .eq('user_id', user.id),
-      serverSupabase
-        .from('companies')
-        .select('id')
-        .eq('user_id', user.id)
-    ])
+    // Get search query from URL parameters
+    const { searchParams } = new URL(request.url)
+    const query = searchParams.get('q') || ''
+    const limit = parseInt(searchParams.get('limit') || '10')
 
-    if (clientsResult.error) {
-      logWithCorrelation(correlationId, 'error', 'Failed to fetch clients for stats', {
-        error: clientsResult.error.message,
+    logWithCorrelation(correlationId, 'debug', 'Searching clients', {
+      query,
+      limit,
+      userId: user.id
+    })
+
+    // Search clients with RBA - only show clients created by this user
+    let clientsQuery = serverSupabase
+      .from('clients')
+      .select(`
+        id,
+        first_name,
+        last_name,
+        email,
+        phone_number,
+        created_at
+      `)
+      .eq('user_id', user.id) // RBA: Only show clients created by this user
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    // Add search filters if query provided
+    if (query.trim()) {
+      const searchTerm = query.trim()
+      clientsQuery = clientsQuery.or(`
+        first_name.ilike.%${searchTerm}%,
+        last_name.ilike.%${searchTerm}%,
+        email.ilike.%${searchTerm}%,
+        phone_number.ilike.%${searchTerm}%
+      `)
+    }
+
+    const { data: clients, error: clientsError } = await clientsQuery
+
+    if (clientsError) {
+      logWithCorrelation(correlationId, 'error', 'Failed to search clients', {
+        error: clientsError.message,
         userId: user.id
       })
+      
+      const response = NextResponse.json(
+        { error: 'Failed to search clients' },
+        { status: 500 }
+      )
+      response.headers.set('x-correlation-id', correlationId)
+      logResponse(correlationId, 500, 'Failed to search clients')
+      return response
     }
 
-    if (companiesResult.error) {
-      logWithCorrelation(correlationId, 'error', 'Failed to fetch companies for stats', {
-        error: companiesResult.error.message,
-        userId: user.id
-      })
-    }
-
-    const clientCount = clientsResult.data?.length || 0
-    const companyCount = companiesResult.data?.length || 0
-
-    logWithCorrelation(correlationId, 'info', 'Clients and companies fetched for stats', {
+    logWithCorrelation(correlationId, 'info', 'Clients search completed', {
       userId: user.id,
-      clientCount,
-      companyCount
+      clientCount: clients?.length || 0,
+      query
     })
 
-    // Calculate stats - using client count as total, and company count as approved
-    const stats: DashboardStats = {
-      in_review: clientCount, // Total clients
-      approved: companyCount, // Total companies
-      ineligible: 0,
-      denied: 0,
-      closed: 0,
-      missing_conditions: 0,
-      pending_documents: 0,
-      total: clientCount + companyCount
-    }
+    // Transform to ClientSearchResult format
+    const searchResults: ClientSearchResult[] = (clients || []).map(client => ({
+      id: client.id,
+      first_name: client.first_name,
+      last_name: client.last_name,
+      email: client.email || undefined,
+      phone_number: client.phone_number || undefined,
+      created_at: client.created_at
+    }))
 
-    logWithCorrelation(correlationId, 'info', 'Dashboard stats calculated', {
-      userId: user.id,
-      total: stats.total,
-      in_review: stats.in_review,
-      approved: stats.approved,
-      ineligible: stats.ineligible,
-      denied: stats.denied,
-      closed: stats.closed,
-      missing_conditions: stats.missing_conditions,
-      pending_documents: stats.pending_documents
-    })
-
-    const response = NextResponse.json({
-      stats,
-      success: true
-    })
+    const response = NextResponse.json(searchResults)
     response.headers.set('x-correlation-id', correlationId)
-    logResponse(correlationId, 200, 'Dashboard stats fetched successfully')
+    logResponse(correlationId, 200, 'Client search completed successfully')
     return response
 
   } catch (error) {
-    logError(correlationId, error as Error, { endpoint: '/api/dashboard/stats GET' })
+    logError(correlationId, error as Error, { endpoint: '/api/clients/search GET' })
     
     const response = NextResponse.json(
       { error: 'Internal server error' },

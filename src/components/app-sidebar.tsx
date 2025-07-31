@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Home, Calculator, FileText, LogOut } from "lucide-react"
+import { Home, Calculator, FileText, LogOut, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { signOut } from "@/lib/auth-client"
@@ -37,9 +37,9 @@ const data = {
       items: [
         {
           title: "My Clients",
-          url: "/dashboard",
-          icon: Home,
-            isActive: pathname === "/dashboard",
+          url: "/dashboard/clients",
+          icon: Users,
+            isActive: pathname === "/dashboard/clients",
         },
       ],
     },

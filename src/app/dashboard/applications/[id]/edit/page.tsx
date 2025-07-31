@@ -125,25 +125,45 @@ export default function EditApplicationPage() {
               onSuccess={handleEditSuccess}
               onCancel={handleEditCancel}
               initialData={{
-                first_name: application.first_name || '',
-                last_name: application.last_name || '',
-                email: application.email || '',
-                phone_number: application.phone_number || '',
-                ssn: application.ssn || '',
-                date_of_birth: application.date_of_birth || '',
-                property_address: application.property_address || '',
-                property_is_tbd: application.property_is_tbd || false,
-                property_type: application.property_type || '',
-                current_residence: application.current_residence || '',
-                loan_objective: (application.loan_objective as LoanObjective) || 'purchase',
-                loan_type: application.loan_type || '',
-                total_income: application.total_income || 0,
-                income_sources: application.income_sources || [],
-                income_documents: [],
-                total_assets: application.total_assets || 0,
-                bank_accounts: application.bank_accounts || [],
-                bank_statements: [],
-                notes: application.notes
+                application_name: application.application_name || `Application for ${application.first_name || 'Client'}`,
+                application_type: 'loan_application',
+                notes: application.notes || '',
+                has_company: false,
+                company: undefined,
+                clients: [{
+                  first_name: application.first_name || '',
+                  last_name: application.last_name || '',
+                  email: application.email || '',
+                  phone_number: application.phone_number || '',
+                  ssn: application.ssn || '',
+                  date_of_birth: application.date_of_birth || '',
+                  current_residence: application.current_residence || '',
+                  total_income: application.total_income || 0,
+                  income_sources: application.income_sources || [],
+                  income_documents: [],
+                  total_assets: application.total_assets || 0,
+                  bank_accounts: application.bank_accounts || [],
+                  bank_statements: [],
+                  has_company: false,
+                  company: undefined
+                }],
+                primary_client: {
+                  first_name: application.first_name || '',
+                  last_name: application.last_name || '',
+                  email: application.email || '',
+                  phone_number: application.phone_number || '',
+                  ssn: application.ssn || '',
+                  date_of_birth: application.date_of_birth || '',
+                  current_residence: application.current_residence || '',
+                  total_income: application.total_income || 0,
+                  income_sources: application.income_sources || [],
+                  income_documents: [],
+                  total_assets: application.total_assets || 0,
+                  bank_accounts: application.bank_accounts || [],
+                  bank_statements: [],
+                  has_company: false,
+                  company: undefined
+                }
               }}
               isEditing={true}
             />

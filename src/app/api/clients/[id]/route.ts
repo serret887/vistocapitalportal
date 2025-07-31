@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedUser, createServerSupabaseClient } from '@/lib/auth'
-import type { DashboardStats, LoanApplicationStatus } from '@/types'
+import type { Client } from '@/types'
 import { 
   getCorrelationId, 
   logRequest, 
@@ -10,21 +10,28 @@ import {
   logWithCorrelation 
 } from '@/lib/utils'
 
-// GET /api/dashboard/stats - Get dashboard statistics
-export async function GET(request: NextRequest) {
+// GET /api/clients/[id] - Get specific client with RBA
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const correlationId = getCorrelationId(request)
+  const { id: clientId } = await params
   
   // Log the incoming request
   logRequest(correlationId, request.method, request.url, 
     Object.fromEntries(request.headers.entries()))
 
   try {
-    logWithCorrelation(correlationId, 'info', 'Getting dashboard stats for user')
+    logWithCorrelation(correlationId, 'info', 'Getting client by ID', {
+      clientId,
+      userId: 'to_be_determined'
+    })
     
     const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
-      logWithCorrelation(correlationId, 'warn', 'User not authenticated for dashboard stats', {
+      logWithCorrelation(correlationId, 'warn', 'User not authenticated for client access', {
         error: userError?.message,
         hasUser: !!user
       })
@@ -38,9 +45,10 @@ export async function GET(request: NextRequest) {
       return response
     }
 
-    logWithCorrelation(correlationId, 'info', 'User authenticated for dashboard stats', {
+    logWithCorrelation(correlationId, 'info', 'User authenticated for client access', {
       userId: user.id,
-      userEmail: user.email
+      userEmail: user.email,
+      clientId
     })
 
     const serverSupabase = createServerSupabaseClient()
@@ -101,77 +109,76 @@ export async function GET(request: NextRequest) {
       partnerId: partnerProfile.id
     })
 
-    // Get client and company counts
-    logWithCorrelation(correlationId, 'debug', 'Fetching clients and companies from database')
-    
-    const [clientsResult, companiesResult] = await Promise.all([
-      serverSupabase
-        .from('clients')
-        .select('id')
-        .eq('user_id', user.id),
-      serverSupabase
-        .from('companies')
-        .select('id')
-        .eq('user_id', user.id)
-    ])
+    // Get client with RBA - only allow access if client was created by this user
+    const { data: client, error: clientError } = await serverSupabase
+      .from('clients')
+      .select(`
+        id,
+        first_name,
+        last_name,
+        email,
+        phone_number,
+        ssn,
+        date_of_birth,
+        current_residence,
+        total_income,
+        income_sources,
+        income_documents,
+        total_assets,
+        bank_accounts,
+        bank_statements,
+        created_at,
+        updated_at
+      `)
+      .eq('id', clientId)
+      .eq('user_id', user.id) // RBA: Only allow access if client was created by this user
+      .single()
 
-    if (clientsResult.error) {
-      logWithCorrelation(correlationId, 'error', 'Failed to fetch clients for stats', {
-        error: clientsResult.error.message,
+    if (clientError) {
+      if (clientError.code === 'PGRST116') {
+        logWithCorrelation(correlationId, 'warn', 'Client not found or access denied', {
+          clientId,
+          userId: user.id,
+          error: clientError.message
+        })
+        
+        const response = NextResponse.json(
+          { error: 'Client not found or access denied' },
+          { status: 404 }
+        )
+        response.headers.set('x-correlation-id', correlationId)
+        logResponse(correlationId, 404, 'Client not found or access denied')
+        return response
+      }
+      
+      logWithCorrelation(correlationId, 'error', 'Failed to get client', {
+        error: clientError.message,
+        clientId,
         userId: user.id
       })
+      
+      const response = NextResponse.json(
+        { error: 'Failed to get client' },
+        { status: 500 }
+      )
+      response.headers.set('x-correlation-id', correlationId)
+      logResponse(correlationId, 500, 'Failed to get client')
+      return response
     }
 
-    if (companiesResult.error) {
-      logWithCorrelation(correlationId, 'error', 'Failed to fetch companies for stats', {
-        error: companiesResult.error.message,
-        userId: user.id
-      })
-    }
-
-    const clientCount = clientsResult.data?.length || 0
-    const companyCount = companiesResult.data?.length || 0
-
-    logWithCorrelation(correlationId, 'info', 'Clients and companies fetched for stats', {
+    logWithCorrelation(correlationId, 'info', 'Client retrieved successfully', {
+      clientId,
       userId: user.id,
-      clientCount,
-      companyCount
+      clientName: `${client.first_name} ${client.last_name}`
     })
 
-    // Calculate stats - using client count as total, and company count as approved
-    const stats: DashboardStats = {
-      in_review: clientCount, // Total clients
-      approved: companyCount, // Total companies
-      ineligible: 0,
-      denied: 0,
-      closed: 0,
-      missing_conditions: 0,
-      pending_documents: 0,
-      total: clientCount + companyCount
-    }
-
-    logWithCorrelation(correlationId, 'info', 'Dashboard stats calculated', {
-      userId: user.id,
-      total: stats.total,
-      in_review: stats.in_review,
-      approved: stats.approved,
-      ineligible: stats.ineligible,
-      denied: stats.denied,
-      closed: stats.closed,
-      missing_conditions: stats.missing_conditions,
-      pending_documents: stats.pending_documents
-    })
-
-    const response = NextResponse.json({
-      stats,
-      success: true
-    })
+    const response = NextResponse.json(client)
     response.headers.set('x-correlation-id', correlationId)
-    logResponse(correlationId, 200, 'Dashboard stats fetched successfully')
+    logResponse(correlationId, 200, 'Client retrieved successfully')
     return response
 
   } catch (error) {
-    logError(correlationId, error as Error, { endpoint: '/api/dashboard/stats GET' })
+    logError(correlationId, error as Error, { endpoint: `/api/clients/${clientId} GET` })
     
     const response = NextResponse.json(
       { error: 'Internal server error' },

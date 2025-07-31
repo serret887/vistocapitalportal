@@ -6,11 +6,12 @@ import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ClientsCompaniesTable } from '@/components/dashboard/clients-companies-table'
 import { ApplicationsTable } from '@/components/dashboard/applications-table'
 import { EnhancedApplicationForm } from '@/components/dashboard/enhanced-application-form'
-import { getDashboardStats, getLoanApplications, deleteLoanApplication } from '@/lib/loan-applications'
-import type { DashboardStats, LoanApplicationWithBorrower, LoanApplicationStatus } from '@/types'
-import { Plus, Users, TrendingUp, DollarSign, FileText } from 'lucide-react'
+import { getDashboardStats } from '@/lib/loan-applications'
+import type { DashboardStats, Client, Company } from '@/types'
+import { Plus, Users, TrendingUp, DollarSign, FileText, Building } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,6 @@ export default function DashboardPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [applications, setApplications] = useState<LoanApplicationWithBorrower[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showApplicationForm, setShowApplicationForm] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
@@ -52,12 +52,9 @@ export default function DashboardPage() {
     console.log(`[${requestId}] Loading dashboard data`)
     setIsLoading(true)
     try {
-      // Load both stats and applications
-      console.log(`[${requestId}] Fetching dashboard stats and applications`)
-      const [statsResult, applicationsResult] = await Promise.all([
-        getDashboardStats(),
-        getLoanApplications()
-      ])
+      // Load stats only
+      console.log(`[${requestId}] Fetching dashboard stats`)
+      const statsResult = await getDashboardStats()
       
       console.log(`[${requestId}] Dashboard stats result`, {
         hasError: !!statsResult.error,
@@ -87,35 +84,6 @@ export default function DashboardPage() {
         })
         setStats(statsResult.stats)
       }
-
-      console.log(`[${requestId}] Applications result`, {
-        hasError: !!applicationsResult.error,
-        error: applicationsResult.error,
-        applicationsCount: applicationsResult.applications?.length || 0
-      })
-
-      if (applicationsResult.error) {
-        if (applicationsResult.error.includes('Authentication required')) {
-          console.log(`[${requestId}] Authentication required for applications, redirecting to login`)
-          toast.error('Please log in to access applications')
-          router.push('/login')
-          return
-        } else if (applicationsResult.error.includes('Onboarding required')) {
-          console.log(`[${requestId}] Onboarding required for applications, redirecting to onboarding`)
-          // User needs to complete onboarding, redirect them
-          router.push('/onboarding')
-          return
-        } else {
-          console.log(`[${requestId}] Applications error`, { error: applicationsResult.error })
-          toast.error(`Failed to load applications: ${applicationsResult.error}`)
-        }
-        console.error('Applications error:', applicationsResult.error)
-      } else {
-        console.log(`[${requestId}] Setting applications`, {
-          count: applicationsResult.applications?.length || 0
-        })
-        setApplications(applicationsResult.applications || [])
-      }
     } catch (error) {
       console.error(`[${requestId}] Unexpected error loading dashboard:`, error)
       toast.error('An unexpected error occurred')
@@ -134,13 +102,6 @@ export default function DashboardPage() {
     }
   }, [loadDashboardData, dataLoaded, requestId])
 
-  const handleStatusClick = useCallback((status: LoanApplicationStatus) => {
-    console.log(`[${requestId}] Status clicked`, { status })
-    // Future: Navigate to filtered view of applications by status
-    console.log(`Clicked on ${status} status`)
-    toast.info(`Viewing ${status} applications - Coming soon!`)
-  }, [requestId])
-
   const handleApplicationSuccess = useCallback(() => {
     console.log(`[${requestId}] Application created successfully`)
     setShowApplicationForm(false)
@@ -149,39 +110,77 @@ export default function DashboardPage() {
     toast.success('Application created successfully!')
   }, [loadDashboardData, requestId])
 
-  const handleViewApplication = useCallback((application: LoanApplicationWithBorrower) => {
-    console.log(`[${requestId}] Viewing application`, {
-      applicationId: application.id,
-      borrowerName: application.first_name,
-      status: application.status
-    })
-    // Navigate to the view application page
-    router.push(`/dashboard/applications/${application.id}`)
-  }, [router, requestId])
+  const handleAddClient = useCallback(() => {
+    console.log(`[${requestId}] Add client clicked`)
+    toast.info('Add client functionality - Coming soon!')
+  }, [requestId])
 
-  const handleDeleteApplication = useCallback(async (application: LoanApplicationWithBorrower) => {
-    if (!confirm(`Are you sure you want to delete the application for ${application.first_name} ${application.last_name}?`)) {
+  const handleAddCompany = useCallback(() => {
+    console.log(`[${requestId}] Add company clicked`)
+    toast.info('Add company functionality - Coming soon!')
+  }, [requestId])
+
+  const handleEditClient = useCallback((client: Client) => {
+    console.log(`[${requestId}] Edit client clicked`, { clientId: client.id })
+    toast.info('Edit client functionality - Coming soon!')
+  }, [requestId])
+
+  const handleEditCompany = useCallback((company: Company) => {
+    console.log(`[${requestId}] Edit company clicked`, { companyId: company.id })
+    toast.info('Edit company functionality - Coming soon!')
+  }, [requestId])
+
+  const handleDeleteClient = useCallback((clientId: string) => {
+    console.log(`[${requestId}] Delete client clicked`, { clientId })
+    toast.info('Delete client functionality - Coming soon!')
+  }, [requestId])
+
+  const handleDeleteCompany = useCallback((companyId: string) => {
+    console.log(`[${requestId}] Delete company clicked`, { companyId })
+    toast.info('Delete company functionality - Coming soon!')
+  }, [requestId])
+
+  const handleAddApplication = useCallback(() => {
+    console.log(`[${requestId}] Add application clicked`)
+    setShowApplicationForm(true)
+  }, [requestId])
+
+  const handleEditApplication = useCallback((application: any) => {
+    console.log(`[${requestId}] Edit application clicked`, { applicationId: application.id })
+    router.push(`/dashboard/applications/${application.id}/edit`)
+  }, [requestId, router])
+
+  const handleDeleteApplication = useCallback(async (applicationId: string) => {
+    console.log(`[${requestId}] Delete application clicked`, { applicationId })
+    
+    if (!confirm('Are you sure you want to delete this application? This action cannot be undone.')) {
       return
     }
 
     try {
-      const { success, error } = await deleteLoanApplication(application.id)
-      
-      if (error) {
-        toast.error(error)
-        return
-      }
+      const response = await fetch(`/api/applications/${applicationId}`, {
+        method: 'DELETE',
+      })
 
-      if (success) {
+      if (response.ok) {
         toast.success('Application deleted successfully')
-        setDataLoaded(false) // Reset to trigger data reload
-        loadDashboardData() // Refresh data
+        // Reload the applications table
+        setDataLoaded(false)
+        loadDashboardData()
+      } else {
+        const error = await response.json()
+        toast.error(error.error || 'Failed to delete application')
       }
     } catch (error) {
       console.error('Error deleting application:', error)
       toast.error('Failed to delete application')
     }
-  }, [loadDashboardData])
+  }, [requestId, loadDashboardData])
+
+  const handleViewApplication = useCallback((application: any) => {
+    console.log(`[${requestId}] View application clicked`, { applicationId: application.id })
+    router.push(`/dashboard/applications/${application.id}`)
+  }, [requestId, router])
 
   const handleExportData = () => {
     // Future: Export applications to CSV/Excel
@@ -247,7 +246,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold visto-dark-blue">
-                {stats.total}
+                {stats.in_review}
               </div>
             </CardContent>
           </Card>
@@ -256,9 +255,9 @@ export default function DashboardPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold visto-dark-blue">
-                  Approved
+                  Total Companies
                 </CardTitle>
-                <TrendingUp className="h-6 w-6 text-green-600" />
+                <Building className="h-6 w-6 text-green-600" />
               </div>
             </CardHeader>
             <CardContent>
@@ -272,14 +271,14 @@ export default function DashboardPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold visto-dark-blue">
-                  In Review
+                  Total Records
                 </CardTitle>
                 <FileText className="h-6 w-6 text-blue-600" />
               </div>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-blue-700">
-                {stats.in_review}
+                {stats.total}
               </div>
             </CardContent>
           </Card>
@@ -288,14 +287,14 @@ export default function DashboardPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg font-semibold visto-dark-blue">
-                  Pending Docs
+                  Applications
                 </CardTitle>
                 <DollarSign className="h-6 w-6 text-yellow-600" />
               </div>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-yellow-700">
-                {stats.missing_conditions + (stats.pending_documents || 0)}
+                0
               </div>
             </CardContent>
           </Card>
@@ -312,14 +311,25 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Clients & Companies Table */}
+      <div>
+        <ClientsCompaniesTable
+          onAddClient={handleAddClient}
+          onAddCompany={handleAddCompany}
+          onEditClient={handleEditClient}
+          onEditCompany={handleEditCompany}
+          onDeleteClient={handleDeleteClient}
+          onDeleteCompany={handleDeleteCompany}
+        />
+      </div>
+
       {/* Applications Table */}
       <div>
         <ApplicationsTable
-          applications={applications}
-          isLoading={isLoading}
-          onViewApplication={handleViewApplication}
+          onAddApplication={handleAddApplication}
+          onEditApplication={handleEditApplication}
           onDeleteApplication={handleDeleteApplication}
-          onExportData={handleExportData}
+          onViewApplication={handleViewApplication}
         />
       </div>
 
