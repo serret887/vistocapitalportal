@@ -15,128 +15,172 @@ interface RouteParams {
 
 // GET /api/applications/[id] - Get a specific application
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const correlationId = getCorrelationId(request)
+  
+  logRequest(correlationId, request.method, request.url, 
+    Object.fromEntries(request.headers.entries()))
+
   try {
     const { id } = await params
+    logWithCorrelation(correlationId, 'info', 'Fetching application', { applicationId: id })
+    
     const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
-      return NextResponse.json(
+      logWithCorrelation(correlationId, 'warn', 'User not authenticated for application fetch')
+      
+      const response = NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
+      response.headers.set('x-correlation-id', correlationId)
+      logResponse(correlationId, 401, 'Authentication required')
+      return response
     }
 
     const serverSupabase = createServerSupabaseClient()
 
-    // Get partner profile
-    const { data: partnerProfile, error: partnerError } = await serverSupabase
-      .from('partner_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (partnerError || !partnerProfile) {
-      return NextResponse.json(
-        { error: 'Partner profile not found' },
-        { status: 404 }
-      )
-    }
-
-    // Get the specific application
+    // Get the specific application with loans
     const { data: application, error } = await serverSupabase
-      .from('loan_applications')
-      .select('*')
+      .from('applications')
+      .select(`
+        *,
+        loans (*)
+      `)
       .eq('id', id)
-      .eq('partner_id', partnerProfile.id)
+      .eq('user_id', user.id)
       .single()
 
     if (error) {
       if (error.code === 'PGRST116') {
-      return NextResponse.json(
-        { error: 'Application not found' },
-        { status: 404 }
+        logWithCorrelation(correlationId, 'warn', 'Application not found', { applicationId: id })
+        
+        const response = NextResponse.json(
+          { error: 'Application not found' },
+          { status: 404 }
         )
+        response.headers.set('x-correlation-id', correlationId)
+        logResponse(correlationId, 404, 'Application not found')
+        return response
       }
-      console.error('Error fetching application:', error)
-      return NextResponse.json(
+      
+      logWithCorrelation(correlationId, 'error', 'Failed to fetch application', {
+        error: error.message,
+        applicationId: id,
+        userId: user.id
+      })
+      
+      const response = NextResponse.json(
         { error: 'Failed to fetch application' },
         { status: 500 }
       )
+      response.headers.set('x-correlation-id', correlationId)
+      logResponse(correlationId, 500, 'Failed to fetch application')
+      return response
     }
 
-    return NextResponse.json({
+    logWithCorrelation(correlationId, 'info', 'Application fetched successfully', {
+      applicationId: id,
+      userId: user.id
+    })
+
+    const response = NextResponse.json({
       application,
       success: true
     })
+    response.headers.set('x-correlation-id', correlationId)
+    logResponse(correlationId, 200, 'Application fetched successfully')
+    return response
 
   } catch (error) {
-    console.error('Unexpected error in GET /api/applications/[id]:', error)
-    return NextResponse.json(
+    logError(correlationId, error as Error, { endpoint: '/api/applications/[id] GET' })
+    
+    const response = NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     )
+    response.headers.set('x-correlation-id', correlationId)
+    logResponse(correlationId, 500, 'Internal server error')
+    return response
   }
 }
 
 // PUT /api/applications/[id] - Update a specific application
 export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const correlationId = getCorrelationId(request)
+  
+  logRequest(correlationId, request.method, request.url, 
+    Object.fromEntries(request.headers.entries()))
+
   try {
     const { id } = await params
+    logWithCorrelation(correlationId, 'info', 'Updating application', { applicationId: id })
+    
     const { user, error: userError } = await getAuthenticatedUser(request)
     
     if (userError || !user) {
-      return NextResponse.json(
+      logWithCorrelation(correlationId, 'warn', 'User not authenticated for application update')
+      
+      const response = NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
       )
+      response.headers.set('x-correlation-id', correlationId)
+      logResponse(correlationId, 401, 'Authentication required')
+      return response
     }
 
     const serverSupabase = createServerSupabaseClient()
-
-    // Get partner profile
-    const { data: partnerProfile, error: partnerError } = await serverSupabase
-      .from('partner_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (partnerError || !partnerProfile) {
-      return NextResponse.json(
-        { error: 'Partner profile not found' },
-        { status: 404 }
-      )
-    }
-
     const updateData = await request.json()
 
     // Update the application
     const { data: application, error } = await serverSupabase
-      .from('loan_applications')
+      .from('applications')
       .update(updateData)
       .eq('id', id)
-      .eq('partner_id', partnerProfile.id)
+      .eq('user_id', user.id)
       .select()
       .single()
 
     if (error) {
-      console.error('Error updating application:', error)
-      return NextResponse.json(
+      logWithCorrelation(correlationId, 'error', 'Failed to update application', {
+        error: error.message,
+        applicationId: id,
+        userId: user.id
+      })
+      
+      const response = NextResponse.json(
         { error: 'Failed to update application' },
         { status: 500 }
       )
+      response.headers.set('x-correlation-id', correlationId)
+      logResponse(correlationId, 500, 'Failed to update application')
+      return response
     }
 
-    return NextResponse.json({
+    logWithCorrelation(correlationId, 'info', 'Application updated successfully', {
+      applicationId: id,
+      userId: user.id
+    })
+
+    const response = NextResponse.json({
       application,
       success: true
     })
+    response.headers.set('x-correlation-id', correlationId)
+    logResponse(correlationId, 200, 'Application updated successfully')
+    return response
 
   } catch (error) {
-    console.error('Unexpected error in PUT /api/applications/[id]:', error)
-    return NextResponse.json(
+    logError(correlationId, error as Error, { endpoint: '/api/applications/[id] PUT' })
+    
+    const response = NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     )
+    response.headers.set('x-correlation-id', correlationId)
+    logResponse(correlationId, 500, 'Internal server error')
+    return response
   }
 }
 

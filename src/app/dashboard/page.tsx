@@ -110,15 +110,7 @@ export default function DashboardPage() {
     toast.success('Application created successfully!')
   }, [loadDashboardData, requestId])
 
-  const handleAddClient = useCallback(() => {
-    console.log(`[${requestId}] Add client clicked`)
-    toast.info('Add client functionality - Coming soon!')
-  }, [requestId])
 
-  const handleAddCompany = useCallback(() => {
-    console.log(`[${requestId}] Add company clicked`)
-    toast.info('Add company functionality - Coming soon!')
-  }, [requestId])
 
   const handleEditClient = useCallback((client: Client) => {
     console.log(`[${requestId}] Edit client clicked`, { clientId: client.id })
@@ -311,17 +303,15 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Clients & Companies Table */}
-      <div>
-        <ClientsCompaniesTable
-          onAddClient={handleAddClient}
-          onAddCompany={handleAddCompany}
-          onEditClient={handleEditClient}
-          onEditCompany={handleEditCompany}
-          onDeleteClient={handleDeleteClient}
-          onDeleteCompany={handleDeleteCompany}
-        />
-      </div>
+                   {/* Clients & Companies Table */}
+             <div>
+               <ClientsCompaniesTable
+                 onEditClient={handleEditClient}
+                 onEditCompany={handleEditCompany}
+                 onDeleteClient={handleDeleteClient}
+                 onDeleteCompany={handleDeleteCompany}
+               />
+             </div>
 
       {/* Applications Table */}
       <div>

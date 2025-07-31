@@ -27,8 +27,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 interface ClientsCompaniesTableProps {
-  onAddClient?: () => void
-  onAddCompany?: () => void
   onEditClient?: (client: Client) => void
   onEditCompany?: (company: Company) => void
   onDeleteClient?: (clientId: string) => void
@@ -36,8 +34,6 @@ interface ClientsCompaniesTableProps {
 }
 
 export function ClientsCompaniesTable({
-  onAddClient,
-  onAddCompany,
   onEditClient,
   onEditCompany,
   onDeleteClient,
@@ -114,23 +110,7 @@ export function ClientsCompaniesTable({
             </CardDescription>
           </div>
           
-          <div className="flex space-x-3">
-            <Button
-              onClick={onAddClient}
-              className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Client
-            </Button>
-            <Button
-              onClick={onAddCompany}
-              variant="outline"
-              className="px-6 py-3 border-2 border-primary text-primary hover:bg-primary/5 font-semibold"
-            >
-              <Building className="w-4 h-4 mr-2" />
-              Add Company
-            </Button>
-          </div>
+
         </div>
 
         {/* Search and Filters */}
@@ -170,11 +150,7 @@ export function ClientsCompaniesTable({
               <div className="text-center py-8">
                 <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No clients found</h3>
-                <p className="text-gray-600 mb-4">Get started by adding your first client</p>
-                <Button onClick={onAddClient} className="bg-primary hover:bg-primary/90">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Client
-                </Button>
+                <p className="text-gray-600 mb-4">No clients found</p>
               </div>
             ) : (
               <div className="rounded-md border">
@@ -273,11 +249,7 @@ export function ClientsCompaniesTable({
               <div className="text-center py-8">
                 <Building className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No companies found</h3>
-                <p className="text-gray-600 mb-4">Get started by adding your first company</p>
-                <Button onClick={onAddCompany} className="bg-primary hover:bg-primary/90">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Company
-                </Button>
+                <p className="text-gray-600 mb-4">No companies found</p>
               </div>
             ) : (
               <div className="rounded-md border">
