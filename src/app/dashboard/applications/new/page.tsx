@@ -1,6 +1,6 @@
 'use client'
 
-import { BorrowerApplicationForm } from '@/components/dashboard/borrower-application-form'
+import { EnhancedApplicationForm } from '@/components/dashboard/enhanced-application-form'
 import { useRouter } from 'next/navigation'
 
 export default function NewBorrowerApplicationPage() {
@@ -16,7 +16,7 @@ export default function NewBorrowerApplicationPage() {
 
   return (
     <div className="container mx-auto py-8">
-      <BorrowerApplicationForm 
+      <EnhancedApplicationForm 
         onSuccess={handleSuccess}
         onCancel={handleCancel}
       />
