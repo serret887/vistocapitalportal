@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import type { LoanApplication, Loan } from '@/types'
+import type { LoanApplication, Loan, Client, Company } from '@/types'
 import { 
   ArrowLeft, 
   FileText, 
@@ -15,7 +15,12 @@ import {
   Calendar,
   Edit,
   Trash2,
-  Building2
+  Building2,
+  Users,
+  Building,
+  Plus,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -24,13 +29,20 @@ interface ApplicationWithLoans extends LoanApplication {
   loans: Loan[]
 }
 
+interface ApplicationWithDetails extends ApplicationWithLoans {
+  clients?: Client[]
+  companies?: Company[]
+}
+
 export default function ViewApplicationPage() {
   const params = useParams()
   const router = useRouter()
-  const [application, setApplication] = useState<ApplicationWithLoans | null>(null)
+  const [application, setApplication] = useState<ApplicationWithDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
-  const [editedApplication, setEditedApplication] = useState<ApplicationWithLoans | null>(null)
+  const [editedApplication, setEditedApplication] = useState<ApplicationWithDetails | null>(null)
+  const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set())
+  const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set())
 
   const applicationId = params.id as string
 
@@ -50,8 +62,16 @@ export default function ViewApplicationPage() {
         }
 
         const data = await response.json()
-        setApplication(data.application)
-        setEditedApplication(data.application)
+        
+        // Process the nested data structure
+        const processedApplication = {
+          ...data.application,
+          clients: data.application.client_applications?.map((ca: any) => ca.clients).filter(Boolean) || [],
+          companies: data.application.companies || []
+        }
+        
+        setApplication(processedApplication)
+        setEditedApplication(processedApplication)
       } catch (error) {
         console.error('Error loading application:', error)
         toast.error('Failed to load application')
@@ -130,6 +150,34 @@ export default function ViewApplicationPage() {
       console.error('Error deleting application:', error)
       toast.error('Failed to delete application')
     }
+  }
+
+  const handleCreateLoan = () => {
+    router.push(`/dashboard/dscr-calculator?applicationId=${applicationId}`)
+  }
+
+  const toggleClientExpansion = (clientId: string) => {
+    setExpandedClients(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(clientId)) {
+        newSet.delete(clientId)
+      } else {
+        newSet.add(clientId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleCompanyExpansion = (companyId: string) => {
+    setExpandedCompanies(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(companyId)) {
+        newSet.delete(companyId)
+      } else {
+        newSet.add(companyId)
+      }
+      return newSet
+    })
   }
 
   const formatCurrency = (amount: number) => {
@@ -332,6 +380,175 @@ export default function ViewApplicationPage() {
           </Card>
         </div>
 
+        {/* Clients Section */}
+        {application.clients && application.clients.length > 0 && (
+          <div className="mt-8">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-visto-gold" />
+                  <CardTitle className="text-xl font-semibold visto-dark-blue">
+                    Clients ({application.clients.length})
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {application.clients.map((client) => (
+                    <div key={client.id} className="border border-gray-200 rounded-lg">
+                      <button
+                        onClick={() => toggleClientExpansion(client.id)}
+                        className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Users className="h-4 w-4 text-visto-gold" />
+                          <div>
+                            <h4 className="font-semibold visto-dark-blue">
+                              {client.first_name} {client.last_name}
+                            </h4>
+                            <p className="text-sm visto-slate">{client.email}</p>
+                          </div>
+                        </div>
+                        {expandedClients.has(client.id) ? (
+                          <ChevronDown className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-gray-500" />
+                        )}
+                      </button>
+                      
+                      {expandedClients.has(client.id) && (
+                        <div className="px-4 pb-4 border-t border-gray-100">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Phone</Label>
+                              <p className="text-sm visto-dark-blue">{client.phone_number || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">SSN</Label>
+                              <p className="text-sm visto-dark-blue">
+                                {client.ssn ? `***-**-${client.ssn.slice(-4)}` : 'Not provided'}
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Date of Birth</Label>
+                              <p className="text-sm visto-dark-blue">
+                                {client.date_of_birth ? formatDate(client.date_of_birth) : 'Not provided'}
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Current Residence</Label>
+                              <p className="text-sm visto-dark-blue">{client.current_residence || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Total Income</Label>
+                              <p className="text-sm visto-dark-blue">
+                                {client.total_income > 0 ? formatCurrency(client.total_income) : 'Not provided'}
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Total Assets</Label>
+                              <p className="text-sm visto-dark-blue">
+                                {client.total_assets > 0 ? formatCurrency(client.total_assets) : 'Not provided'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Companies Section */}
+        {application.companies && application.companies.length > 0 && (
+          <div className="mt-8">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Building className="h-5 w-5 text-visto-gold" />
+                  <CardTitle className="text-xl font-semibold visto-dark-blue">
+                    Companies ({application.companies.length})
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {application.companies.map((company) => (
+                    <div key={company.id} className="border border-gray-200 rounded-lg">
+                      <button
+                        onClick={() => toggleCompanyExpansion(company.id)}
+                        className="w-full p-4 text-left flex items-center justify-between hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Building className="h-4 w-4 text-visto-gold" />
+                          <div>
+                            <h4 className="font-semibold visto-dark-blue">
+                              {company.company_name}
+                            </h4>
+                            <p className="text-sm visto-slate">{company.company_type || 'Company'}</p>
+                          </div>
+                        </div>
+                        {expandedCompanies.has(company.id) ? (
+                          <ChevronDown className="h-4 w-4 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-gray-500" />
+                        )}
+                      </button>
+                      
+                      {expandedCompanies.has(company.id) && (
+                        <div className="px-4 pb-4 border-t border-gray-100">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">EIN</Label>
+                              <p className="text-sm visto-dark-blue">{company.ein || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Business Phone</Label>
+                              <p className="text-sm visto-dark-blue">{company.business_phone || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Business Email</Label>
+                              <p className="text-sm visto-dark-blue">{company.business_email || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Business Address</Label>
+                              <p className="text-sm visto-dark-blue">{company.business_address || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Industry</Label>
+                              <p className="text-sm visto-dark-blue">{company.industry || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Years in Business</Label>
+                              <p className="text-sm visto-dark-blue">{company.years_in_business || 'Not provided'}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Annual Revenue</Label>
+                              <p className="text-sm visto-dark-blue">
+                                {company.annual_revenue && company.annual_revenue > 0 
+                                  ? formatCurrency(company.annual_revenue) 
+                                  : 'Not provided'
+                                }
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium visto-slate">Number of Employees</Label>
+                              <p className="text-sm visto-dark-blue">{company.number_of_employees || 'Not provided'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Loans Section */}
         <div className="mt-8">
           <Card>
@@ -343,6 +560,13 @@ export default function ViewApplicationPage() {
                     Loans ({application.loans?.length || 0})
                   </CardTitle>
                 </div>
+                <Button 
+                  onClick={handleCreateLoan}
+                  className="flex items-center gap-2 bg-visto-gold hover:bg-visto-dark-gold text-white"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Loan
+                </Button>
               </div>
             </CardHeader>
             <CardContent>

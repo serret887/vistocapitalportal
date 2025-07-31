@@ -211,7 +211,7 @@ export default function DashboardPage() {
             My Clients
           </h1>
           <p className="text-xl visto-slate mt-2">
-            Manage your loan applications and track client progress
+            Manage your Opportunities and track client progress
           </p>
         </div>
         
@@ -220,7 +220,7 @@ export default function DashboardPage() {
           className="px-8 py-4 text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
         >
           <Plus className="w-5 h-5 mr-3" />
-          Create New Application
+          Create New Opportunity
         </Button>
       </div>
 

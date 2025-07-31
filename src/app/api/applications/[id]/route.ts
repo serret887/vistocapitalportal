@@ -40,12 +40,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const serverSupabase = createServerSupabaseClient()
 
-    // Get the specific application with loans
+    // Get the specific application with loans, clients, and companies
     const { data: application, error } = await serverSupabase
       .from('applications')
       .select(`
         *,
-        loans (*)
+        loans (*),
+        client_applications (
+          client_id,
+          client_role,
+          clients (*)
+        ),
+        companies (*)
       `)
       .eq('id', id)
       .eq('user_id', user.id)
