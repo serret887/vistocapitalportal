@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { api } from '@/lib/api-client'
 
 interface ApplicationWithLoans extends LoanApplication {
   loans: Loan[]
@@ -52,16 +53,15 @@ export default function ViewApplicationPage() {
 
       setIsLoading(true)
       try {
-        const response = await fetch(`/api/applications/${applicationId}`)
+        const result = await api.getApplication(applicationId)
         
-        if (!response.ok) {
-          const error = await response.json()
-          toast.error(error.error || 'Failed to load application')
+        if (result.error) {
+          toast.error(result.error || 'Failed to load application')
           router.push('/dashboard')
           return
         }
 
-        const data = await response.json()
+        const data = result.data as any
         
         // Process the nested data structure
         const processedApplication = {
@@ -92,26 +92,19 @@ export default function ViewApplicationPage() {
     if (!editedApplication) return
     
     try {
-      const response = await fetch(`/api/applications/${applicationId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          application_name: editedApplication.application_name,
-          application_type: editedApplication.application_type,
-          notes: editedApplication.notes,
-          status: editedApplication.status
-        })
+      const result = await api.updateApplication(applicationId, {
+        application_name: editedApplication.application_name,
+        application_type: editedApplication.application_type,
+        notes: editedApplication.notes,
+        status: editedApplication.status
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        toast.error(error.error || 'Failed to update application')
+      if (result.error) {
+        toast.error(result.error || 'Failed to update application')
         return
       }
 
-      const data = await response.json()
+      const data = result.data as any
       setApplication(data.application)
       setIsEditing(false)
       toast.success('Application updated successfully!')
@@ -134,13 +127,10 @@ export default function ViewApplicationPage() {
     }
 
     try {
-      const response = await fetch(`/api/applications/${applicationId}`, {
-        method: 'DELETE',
-      })
+      const result = await api.deleteApplication(applicationId)
 
-      if (!response.ok) {
-        const error = await response.json()
-        toast.error(error.error || 'Failed to delete application')
+      if (result.error) {
+        toast.error(result.error || 'Failed to delete application')
         return
       }
 

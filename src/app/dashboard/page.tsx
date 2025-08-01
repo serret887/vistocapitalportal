@@ -132,10 +132,7 @@ export default function DashboardPage() {
     toast.info('Delete company functionality - Coming soon!')
   }, [requestId])
 
-  const handleAddApplication = useCallback(() => {
-    console.log(`[${requestId}] Add application clicked`)
-    setShowApplicationForm(true)
-  }, [requestId])
+
 
   const handleEditApplication = useCallback((application: any) => {
     console.log(`[${requestId}] Edit application clicked`, { applicationId: application.id })
@@ -226,7 +223,7 @@ export default function DashboardPage() {
 
       {/* Quick Stats Overview */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card className="border-2 border-primary/20 bg-gradient-visto-subtle">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -259,22 +256,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-blue-200 bg-blue-50">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold visto-dark-blue">
-                  Total Records
-                </CardTitle>
-                <FileText className="h-6 w-6 text-blue-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-700">
-                {stats.total}
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="border-2 border-yellow-200 bg-yellow-50">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -286,7 +267,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-yellow-700">
-                0
+                {stats.ineligible}
               </div>
             </CardContent>
           </Card>
@@ -316,35 +297,13 @@ export default function DashboardPage() {
       {/* Applications Table */}
       <div>
         <ApplicationsTable
-          onAddApplication={handleAddApplication}
           onEditApplication={handleEditApplication}
           onDeleteApplication={handleDeleteApplication}
           onViewApplication={handleViewApplication}
         />
       </div>
 
-      {/* Empty State */}
-      {stats && stats.total === 0 && (
-        <Card className="border-2 border-dashed border-primary/30 bg-gradient-visto-subtle">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <FileText className="h-16 w-16 visto-gold mb-6" />
-            <h3 className="text-2xl font-semibold visto-dark-blue mb-3">
-              No client applications yet
-            </h3>
-            <p className="text-lg visto-slate mb-8 max-w-lg">
-              Start building your client portfolio by creating your first comprehensive loan application. 
-              Track progress and manage all applications in one place.
-            </p>
-            <Button
-              onClick={() => setShowApplicationForm(true)}
-              className="px-12 py-4 text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <Plus className="w-5 h-5 mr-3" />
-              Create First Application
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+
     </div>
   )
 }

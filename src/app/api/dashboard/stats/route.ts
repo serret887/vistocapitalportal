@@ -101,16 +101,20 @@ export async function GET(request: NextRequest) {
       partnerId: partnerProfile.id
     })
 
-    // Get client and company counts
-    logWithCorrelation(correlationId, 'debug', 'Fetching clients and companies from database')
+    // Get client, company, and application counts
+    logWithCorrelation(correlationId, 'debug', 'Fetching clients, companies, and applications from database')
     
-    const [clientsResult, companiesResult] = await Promise.all([
+    const [clientsResult, companiesResult, applicationsResult] = await Promise.all([
       serverSupabase
         .from('clients')
         .select('id')
         .eq('user_id', user.id),
       serverSupabase
         .from('companies')
+        .select('id')
+        .eq('user_id', user.id),
+      serverSupabase
+        .from('applications')
         .select('id')
         .eq('user_id', user.id)
     ])
@@ -129,20 +133,29 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    if (applicationsResult.error) {
+      logWithCorrelation(correlationId, 'error', 'Failed to fetch applications for stats', {
+        error: applicationsResult.error.message,
+        userId: user.id
+      })
+    }
+
     const clientCount = clientsResult.data?.length || 0
     const companyCount = companiesResult.data?.length || 0
+    const applicationCount = applicationsResult.data?.length || 0
 
-    logWithCorrelation(correlationId, 'info', 'Clients and companies fetched for stats', {
+    logWithCorrelation(correlationId, 'info', 'Clients, companies, and applications fetched for stats', {
       userId: user.id,
       clientCount,
-      companyCount
+      companyCount,
+      applicationCount
     })
 
-    // Calculate stats - using client count as total, and company count as approved
+    // Calculate stats - using actual counts
     const stats: DashboardStats = {
       in_review: clientCount, // Total clients
       approved: companyCount, // Total companies
-      ineligible: 0,
+      ineligible: applicationCount, // Total applications
       denied: 0,
       closed: 0,
       missing_conditions: 0,

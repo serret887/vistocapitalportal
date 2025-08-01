@@ -104,7 +104,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
     {
       id: 0,
       title: 'Company Management',
-      description: 'Search and create companies',
+      description: 'Search for an existing company or create a new one (optional)',
       icon: Building
     },
     {
@@ -116,7 +116,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
     {
       id: 2,
       title: 'Application Creation',
-      description: 'Create application from selected companies and clients',
+      description: 'Create application from selected company and clients',
       icon: FileText
     }
   ]
@@ -175,7 +175,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
 
       case 2: // Application Creation
         if (selectedCompanies.length === 0 && selectedClients.length === 0) {
-          newErrors.selection = 'Please select at least one company or client'
+          newErrors.selection = 'Please select at least one client (company is optional)'
         }
         break
     }
@@ -382,15 +382,15 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
 
   const handleSubmit = async () => {
     if (selectedCompanies.length === 0 && selectedClients.length === 0) {
-      toast.error('Please select at least one company or client')
+      toast.error('Please select at least one client (company is optional)')
       return
     }
 
     setIsLoading(true)
     try {
       const applicationData = {
-        companies: selectedCompanies.map(c => c.id),
-        clients: selectedClients.map(c => c.id),
+        companies: selectedCompanies.map(c => c.id.startsWith('temp-') ? c : c.id),
+        clients: selectedClients.map(c => c.id.startsWith('temp-') ? c : c.id),
         application_name: `Application - ${new Date().toLocaleDateString()}`,
         application_type: 'loan_application',
         notes: ''
@@ -423,14 +423,14 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
     <div className="space-y-6">
       <div>
         <h4 className="text-lg font-semibold visto-dark-blue">Company Management</h4>
-        <p className="text-base visto-slate">Search and select companies for this application</p>
+        <p className="text-base visto-slate">Search for an existing company or create a new one (optional)</p>
       </div>
       
       <Card className="border-2 border-primary/20 p-6">
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Company Search */}
           <div>
-            <Label className="text-sm font-medium visto-dark-blue">Search Companies</Label>
+            <Label className="text-sm font-medium visto-dark-blue">Search Existing Companies</Label>
             <div className="relative mt-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
@@ -449,16 +449,27 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
             {/* Search Results */}
             {companySearchResults.length > 0 && (
               <div className="mt-2 space-y-2">
+                {selectedCompanies.length > 0 && (
+                  <div className="p-3 border border-yellow-200 rounded-lg bg-yellow-50">
+                    <p className="text-sm text-yellow-800">
+                      A company is already selected. Remove it first to select a different company.
+                    </p>
+                  </div>
+                )}
                 {companySearchResults.map((company) => (
                   <div
                     key={company.id}
-                    className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    className={`p-3 border rounded-lg cursor-pointer ${
+                      selectedCompanies.length > 0 
+                        ? 'border-gray-200 bg-gray-100 opacity-50' 
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
                     onClick={() => {
-                      if (!selectedCompanies.find(c => c.id === company.id)) {
-                        setSelectedCompanies(prev => [...prev, company])
+                      if (selectedCompanies.length === 0) {
+                        setSelectedCompanies([company])
+                        setSearchQuery('')
+                        setCompanySearchResults([])
                       }
-                      setSearchQuery('')
-                      setCompanySearchResults([])
                     }}
                   >
                     <div className="flex items-center justify-between">
@@ -466,18 +477,189 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
                         <h5 className="font-medium visto-dark-blue">{company.company_name}</h5>
                         <p className="text-sm visto-slate">{company.company_type || 'Company'}</p>
                       </div>
-                      <Plus className="h-4 w-4 text-visto-gold" />
+                      {selectedCompanies.length === 0 && <Plus className="h-4 w-4 text-visto-gold" />}
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Create New Company */}
+          <div className="border-t pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <Label className="text-sm font-medium visto-dark-blue">Create New Company</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setFormData(prev => ({ ...prev, has_company: !prev.has_company }))}
+                className="flex items-center gap-2"
+                disabled={selectedCompanies.length > 0}
+              >
+                {formData.has_company ? 'Cancel' : 'Add Company'}
+              </Button>
+            </div>
+
+            {formData.has_company && (
+              <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormInput
+                    id="company_name"
+                    label="Company Name"
+                    type="text"
+                    value={formData.company?.company_name || ''}
+                    onChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      company: { 
+                        ...prev.company, 
+                        company_name: value,
+                        company_type: prev.company?.company_type || '',
+                        ein: prev.company?.ein || '',
+                        business_address: prev.company?.business_address || '',
+                        business_phone: prev.company?.business_phone || '',
+                        business_email: prev.company?.business_email || '',
+                        industry: prev.company?.industry || '',
+                        years_in_business: prev.company?.years_in_business || 0,
+                        annual_revenue: prev.company?.annual_revenue || 0,
+                        number_of_employees: prev.company?.number_of_employees || 0,
+                        ownership_percentage: prev.company?.ownership_percentage || 0,
+                        role_in_company: prev.company?.role_in_company || ''
+                      }
+                    }))}
+                    placeholder="Enter company name"
+                  />
+                  
+                  <div className="space-y-3">
+                    <Label htmlFor="company_type" className="text-sm font-medium visto-dark-blue">
+                      Company Type
+                    </Label>
+                    <Select
+                      value={formData.company?.company_type || ''}
+                      onValueChange={(value) => setFormData(prev => ({
+                        ...prev,
+                        company: { 
+                          ...prev.company, 
+                          company_type: value,
+                          company_name: prev.company?.company_name || '',
+                          ein: prev.company?.ein || '',
+                          business_address: prev.company?.business_address || '',
+                          business_phone: prev.company?.business_phone || '',
+                          business_email: prev.company?.business_email || '',
+                          industry: prev.company?.industry || '',
+                          years_in_business: prev.company?.years_in_business || 0,
+                          annual_revenue: prev.company?.annual_revenue || 0,
+                          number_of_employees: prev.company?.number_of_employees || 0,
+                          ownership_percentage: prev.company?.ownership_percentage || 0,
+                          role_in_company: prev.company?.role_in_company || ''
+                        }
+                      }))}
+                    >
+                      <SelectTrigger className="border-2 focus:ring-2 focus:ring-primary focus:border-primary">
+                        <SelectValue placeholder="Select company type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="LLC">LLC</SelectItem>
+                        <SelectItem value="C Corporation">C Corporation</SelectItem>
+                        <SelectItem value="S Corporation">S Corporation</SelectItem>
+                        <SelectItem value="Limited Partnership">Limited Partnership</SelectItem>
+                        <SelectItem value="Non-Profit">Non-Profit</SelectItem>
+                        <SelectItem value="Trust">Trust</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <EINInput
+                    id="company_ein"
+                    label="EIN (Employer Identification Number)"
+                    value={formData.company?.ein || ''}
+                    onChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      company: { 
+                        ...prev.company, 
+                        ein: value,
+                        company_name: prev.company?.company_name || '',
+                        company_type: prev.company?.company_type || '',
+                        business_address: prev.company?.business_address || '',
+                        business_phone: prev.company?.business_phone || '',
+                        business_email: prev.company?.business_email || '',
+                        industry: prev.company?.industry || '',
+                        years_in_business: prev.company?.years_in_business || 0,
+                        annual_revenue: prev.company?.annual_revenue || 0,
+                        number_of_employees: prev.company?.number_of_employees || 0,
+                        role_in_company: prev.company?.role_in_company || ''
+                      }
+                    }))}
+                  />
+                  
+                  <PhoneInput
+                    id="company_phone"
+                    label="Business Phone"
+                    value={formData.company?.business_phone || ''}
+                    onChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      company: { 
+                        ...prev.company, 
+                        business_phone: value,
+                        company_name: prev.company?.company_name || '',
+                        company_type: prev.company?.company_type || '',
+                        ein: prev.company?.ein || '',
+                        business_address: prev.company?.business_address || '',
+                        business_email: prev.company?.business_email || '',
+                        industry: prev.company?.industry || '',
+                        years_in_business: prev.company?.years_in_business || 0,
+                        annual_revenue: prev.company?.annual_revenue || 0,
+                        number_of_employees: prev.company?.number_of_employees || 0,
+                        role_in_company: prev.company?.role_in_company || ''
+                      }
+                    }))}
+                  />
+                </div>
+
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (formData.company?.company_name) {
+                        const newCompany: Company = {
+                          id: `temp-${Date.now()}`,
+                          company_name: formData.company.company_name,
+                          company_type: formData.company.company_type || '',
+                          ein: formData.company.ein || '',
+                          business_address: formData.company.business_address || '',
+                          business_phone: formData.company.business_phone || '',
+                          business_email: formData.company.business_email || '',
+                          industry: formData.company.industry || '',
+                          years_in_business: formData.company.years_in_business || 0,
+                          annual_revenue: formData.company.annual_revenue || 0,
+                          number_of_employees: formData.company.number_of_employees || 0,
+                          created_at: new Date().toISOString(),
+                          updated_at: new Date().toISOString()
+                        }
+                        // Only allow one company maximum
+                        setSelectedCompanies([newCompany])
+                        setFormData(prev => ({ ...prev, has_company: false, company: undefined }))
+                        toast.success('Company added to selection')
+                      } else {
+                        toast.error('Please enter a company name')
+                      }
+                    }}
+                    className="px-4"
+                  >
+                    Add to Selection
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
           
-          {/* Selected Companies */}
+          {/* Selected Company */}
           {selectedCompanies.length > 0 && (
             <div>
-              <Label className="text-sm font-medium visto-dark-blue">Selected Companies</Label>
+              <Label className="text-sm font-medium visto-dark-blue">Selected Company</Label>
               <div className="mt-2 space-y-2">
                 {selectedCompanies.map((company) => (
                   <div
@@ -492,7 +674,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setSelectedCompanies(prev => prev.filter(c => c.id !== company.id))}
+                        onClick={() => setSelectedCompanies([])}
                         className="text-red-600 hover:text-red-700"
                       >
                         <X className="h-4 w-4" />
@@ -512,14 +694,14 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
     <div className="space-y-6">
       <div>
         <h4 className="text-lg font-semibold visto-dark-blue">Client Management</h4>
-        <p className="text-base visto-slate">Search and select clients for this application</p>
+        <p className="text-base visto-slate">Search existing clients or create new ones</p>
       </div>
       
       <Card className="border-2 border-primary/20 p-6">
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Client Search */}
           <div>
-            <Label className="text-sm font-medium visto-dark-blue">Search Clients</Label>
+            <Label className="text-sm font-medium visto-dark-blue">Search Existing Clients</Label>
             <div className="relative mt-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
@@ -550,6 +732,144 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
                         <p className="text-sm visto-slate">{client.email}</p>
                       </div>
                       <Plus className="h-4 w-4 text-visto-gold" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Create New Client */}
+          <div className="border-t pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <Label className="text-sm font-medium visto-dark-blue">Create New Client</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newClient = getEmptyClientFormData()
+                  setFormData(prev => ({ ...prev, clients: [...prev.clients, newClient] }))
+                }}
+                className="flex items-center gap-2"
+              >
+                Add Client
+              </Button>
+            </div>
+
+            {formData.clients.length > 0 && (
+              <div className="space-y-4">
+                {formData.clients.map((client, index) => (
+                  <div key={index} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="flex items-center justify-between mb-4">
+                      <h5 className="font-medium visto-dark-blue">Client {index + 1}</h5>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeClient(index)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormInput
+                        id={`client_${index}_first_name`}
+                        label="First Name"
+                        value={client.first_name}
+                        onChange={(value) => updateClient(index, 'first_name', value)}
+                        placeholder="Enter first name"
+                      />
+                      
+                      <FormInput
+                        id={`client_${index}_last_name`}
+                        label="Last Name"
+                        value={client.last_name}
+                        onChange={(value) => updateClient(index, 'last_name', value)}
+                        placeholder="Enter last name"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <EmailInput
+                        id={`client_${index}_email`}
+                        label="Email"
+                        value={client.email}
+                        onChange={(value) => updateClient(index, 'email', value)}
+                      />
+
+                      <PhoneInput
+                        id={`client_${index}_phone`}
+                        label="Phone Number"
+                        value={client.phone_number}
+                        onChange={(value) => updateClient(index, 'phone_number', value)}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <SSNInput
+                        id={`client_${index}_ssn`}
+                        label="SSN"
+                        value={client.ssn}
+                        onChange={(value) => updateClient(index, 'ssn', value)}
+                      />
+
+                      <FormInput
+                        id={`client_${index}_dob`}
+                        label="Date of Birth"
+                        type="date"
+                        value={client.date_of_birth}
+                        onChange={(value) => updateClient(index, 'date_of_birth', value)}
+                      />
+                    </div>
+
+                    <div className="mt-4">
+                      <FormInput
+                        id={`client_${index}_residence`}
+                        label="Current Residence Address"
+                        value={client.current_residence}
+                        onChange={(value) => updateClient(index, 'current_residence', value)}
+                        placeholder="Enter current address"
+                        className="md:col-span-2"
+                      />
+                    </div>
+
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          if (client.first_name && client.last_name && client.email) {
+                            const newClient: Client = {
+                              id: `temp-${Date.now()}-${index}`,
+                              first_name: client.first_name,
+                              last_name: client.last_name,
+                              email: client.email,
+                              phone_number: client.phone_number,
+                              ssn: client.ssn,
+                              date_of_birth: client.date_of_birth,
+                              current_residence: client.current_residence,
+                              total_income: client.total_income,
+                              income_sources: client.income_sources,
+                              income_documents: client.income_documents,
+                              total_assets: client.total_assets,
+                              bank_accounts: client.bank_accounts,
+                              bank_statements: client.bank_statements,
+                              created_at: new Date().toISOString(),
+                              updated_at: new Date().toISOString()
+                            }
+                            setSelectedClients(prev => [...prev, newClient])
+                            removeClient(index)
+                            toast.success('Client added to selection')
+                          } else {
+                            toast.error('Please enter first name, last name, and email')
+                          }
+                        }}
+                        className="px-4"
+                      >
+                        Add to Selection
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -654,26 +974,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
             </div>
           )}
           
-          {/* Create Application Button */}
-          <div className="flex justify-center pt-4">
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading || (selectedCompanies.length === 0 && selectedClients.length === 0)}
-              className="px-8 py-3 text-lg"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Application...
-                </>
-              ) : (
-                <>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Create Application
-                </>
-              )}
-            </Button>
-          </div>
+
         </div>
       </Card>
     </div>
@@ -699,7 +1000,7 @@ export function EnhancedApplicationForm({ onSuccess, onCancel, initialData, isEd
           {isEditing ? 'Edit Application' : 'Create New Application'}
         </h2>
         <p className="text-base visto-slate">
-          {isEditing ? 'Update application details' : 'Select companies and clients to create a new application'}
+          {isEditing ? 'Update application details' : 'Select a company (optional) and clients to create a new application'}
         </p>
       </div>
 

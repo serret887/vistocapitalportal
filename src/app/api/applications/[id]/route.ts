@@ -48,10 +48,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         loans (*),
         client_applications (
           client_id,
-          client_role,
-          clients (*)
-        ),
-        companies (*)
+          clients (
+            *,
+            client_companies (
+              company_id,
+              companies (*)
+            )
+          )
+        )
       `)
       .eq('id', id)
       .eq('user_id', user.id)

@@ -29,14 +29,12 @@ interface ApplicationWithLoans extends LoanApplication {
 }
 
 interface ApplicationsTableProps {
-  onAddApplication?: () => void
   onEditApplication?: (application: ApplicationWithLoans) => void
   onDeleteApplication?: (applicationId: string) => void
   onViewApplication?: (application: ApplicationWithLoans) => void
 }
 
 export function ApplicationsTable({
-  onAddApplication,
   onEditApplication,
   onDeleteApplication,
   onViewApplication
@@ -107,23 +105,13 @@ export function ApplicationsTable({
   return (
     <Card className="border-2 border-border shadow-2xl">
       <CardHeader className="pb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl font-bold visto-dark-blue">
-              Applications & Loans
-            </CardTitle>
-            <CardDescription className="text-lg visto-slate">
-              Manage your loan applications and their associated loans
-            </CardDescription>
-          </div>
-          
-          <Button
-            onClick={onAddApplication}
-            className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Application
-          </Button>
+        <div>
+          <CardTitle className="text-2xl font-bold visto-dark-blue">
+            Applications & Loans
+          </CardTitle>
+          <CardDescription className="text-lg visto-slate">
+            Manage your loan applications and their associated loans
+          </CardDescription>
         </div>
 
         {/* Search */}
@@ -150,11 +138,7 @@ export function ApplicationsTable({
           <div className="text-center py-8">
             <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No applications found</h3>
-            <p className="text-gray-600 mb-4">Get started by creating your first application</p>
-            <Button onClick={onAddApplication} className="bg-primary hover:bg-primary/90">
-              <Plus className="w-4 h-4 mr-2" />
-              New Application
-            </Button>
+            <p className="text-gray-600 mb-4">No applications have been created yet</p>
           </div>
         ) : (
           <div className="rounded-md border">
