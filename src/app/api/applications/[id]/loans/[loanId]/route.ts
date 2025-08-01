@@ -120,8 +120,8 @@ export async function DELETE(
 
     // First verify the application belongs to the current user
     const { data: application, error: appError } = await supabase
-      .from('loan_applications')
-      .select('id, partner_id')
+      .from('applications')
+      .select('id, user_id')
       .eq('id', applicationId)
       .single()
 
@@ -129,38 +129,21 @@ export async function DELETE(
       return NextResponse.json({ error: 'Application not found' }, { status: 404 })
     }
 
-    // Get partner_id for the current user
-    const { data: partnerProfile } = await supabase
-      .from('partner_profiles')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!partnerProfile || application.partner_id !== partnerProfile.id) {
+    // Verify the application belongs to the current user
+    if (application.user_id !== user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    // Delete the loan from loans table
-    const { error: loanError } = await supabase
+    // Delete the loan
+    const { error } = await supabase
       .from('loans')
       .delete()
       .eq('id', loanId)
       .eq('application_id', applicationId)
 
-    if (loanError) {
-      console.error('Error deleting loan:', loanError)
+    if (error) {
+      console.error('Error deleting loan:', error)
       return NextResponse.json({ error: 'Failed to delete loan' }, { status: 500 })
-    }
-
-    // Delete the application from loan_applications table
-    const { error: appDeleteError } = await supabase
-      .from('loan_applications')
-      .delete()
-      .eq('id', applicationId)
-
-    if (appDeleteError) {
-      console.error('Error deleting application:', appDeleteError)
-      return NextResponse.json({ error: 'Failed to delete application' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })

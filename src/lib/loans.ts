@@ -1,6 +1,5 @@
 import { Loan, LoanFormData } from '@/types'
 import { apiClient } from './api-client'
-import { supabase } from '@/lib/supabase'
 
 // Get all loans for an application
 export async function getLoans(applicationId: string): Promise<{ loans: Loan[]; error?: string }> {
@@ -86,11 +85,19 @@ export async function deleteLoan(applicationId: string, loanId: string): Promise
 }
 
 // Delete all loans by applicationId
-export async function deleteLoansByApplicationId(applicationId: string) {
-  return supabase
-    .from('loans')
-    .delete()
-    .eq('application_id', applicationId);
+export async function deleteLoansByApplicationId(applicationId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await apiClient.delete<{ success: boolean }>(`/applications/${applicationId}/loans`)
+    
+    if (response.error) {
+      return { success: false, error: response.error }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting all loans:', error)
+    return { success: false, error: 'Failed to delete all loans' }
+  }
 }
 
 // Helper function to create loan from DSCR data

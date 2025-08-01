@@ -307,14 +307,61 @@ export async function POST(
 } 
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id: applicationId } = params;
+  const correlationId = getCorrelationId(request)
+  
+  logRequest(correlationId, request.method, request.url, 
+    Object.fromEntries(request.headers.entries()))
+
   try {
-    const { error } = await deleteLoansByApplicationId(applicationId);
+    const { id: applicationId } = params;
+    
+    const supabase = createServerSupabaseClient()
+
+    logWithCorrelation(correlationId, 'info', 'Deleting all loans for application', {
+      applicationId
+    })
+
+    // Delete all loans for the application
+    const { error } = await supabase
+      .from('loans')
+      .delete()
+      .eq('application_id', applicationId)
+
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      logError(correlationId, error, {
+        applicationId,
+        operation: 'delete_all_loans'
+      })
+      
+      const response = NextResponse.json(
+        { error: 'Failed to delete loans' },
+        { status: 500 }
+      )
+      response.headers.set('x-correlation-id', correlationId)
+      logResponse(correlationId, 500, 'Failed to delete loans')
+      return response
     }
-    return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+
+    logWithCorrelation(correlationId, 'info', 'All loans deleted successfully', {
+      applicationId
+    })
+
+    const response = NextResponse.json({ success: true })
+    response.headers.set('x-correlation-id', correlationId)
+    logResponse(correlationId, 200, 'All loans deleted successfully')
+    return response
+  } catch (error) {
+    logError(correlationId, error as Error, {
+      applicationId: params.id,
+      operation: 'delete_all_loans'
+    })
+    
+    const response = NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+    response.headers.set('x-correlation-id', correlationId)
+    logResponse(correlationId, 500, 'Internal server error')
+    return response
   }
 } 

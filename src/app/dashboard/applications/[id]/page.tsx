@@ -63,6 +63,7 @@ export default function ViewApplicationPage() {
       }
 
       const data = result.data as any
+      console.log('Loaded application data:', data)
       
       // Process the nested data structure
       const processedApplication = {
@@ -71,6 +72,7 @@ export default function ViewApplicationPage() {
         companies: data.application.companies || []
       }
       
+      console.log('Processed application with loans:', processedApplication.loans?.length || 0, 'loans')
       setApplication(processedApplication)
       setEditedApplication(processedApplication)
     } catch (error) {
@@ -170,6 +172,7 @@ export default function ViewApplicationPage() {
   }
 
   const handleDeleteLoan = async (loanId: string) => {
+    console.log('Attempting to delete loan:', loanId)
     if (!confirm('Are you sure you want to delete this loan? This action cannot be undone.')) {
       return
     }
@@ -183,10 +186,11 @@ export default function ViewApplicationPage() {
         return
       }
 
-      console.log('Loan deleted successfully')
+      console.log('Loan deleted successfully, reloading application data...')
       toast.success('Loan deleted successfully')
       // Refresh the application data to show updated loans
       await loadApplication()
+      console.log('Application data reloaded after deletion')
     } catch (err) {
       console.error('Failed to delete loan:', err)
       toast.error('Failed to delete loan')
