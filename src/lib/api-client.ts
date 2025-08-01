@@ -252,4 +252,17 @@ export const api = {
   // Health check
   health: () => 
     apiClient.get('/health'),
+
+  // Loan endpoints
+  getLoans: (applicationId: string) => 
+    apiClient.get(`/applications/${applicationId}/loans`),
+  
+  createLoan: (applicationId: string, loanData: any) => 
+    apiClient.post(`/applications/${applicationId}/loans`, loanData),
+  
+  deleteLoan: (applicationId: string, loanId: string) => 
+    apiClient.delete(`/applications/${applicationId}/loans/${loanId}`),
+  
+  deleteAllLoans: (applicationId: string) => 
+    apiClient.delete(`/applications/${applicationId}/loans`),
 } 

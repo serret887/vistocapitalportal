@@ -8,6 +8,7 @@ import {
   logDebug,
   logWithCorrelation 
 } from '@/lib/utils'
+import { deleteLoansByApplicationId } from '@/lib/loans';
 // import { sendLoanNotification } from '@/lib/slack-notifications'
 
 // GET /api/applications/[id]/loans - Get all loans for an application
@@ -302,5 +303,18 @@ export async function POST(
     response.headers.set('x-correlation-id', correlationId)
     logResponse(correlationId, 500, 'Internal server error')
     return response
+  }
+} 
+
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const { id: applicationId } = params;
+  try {
+    const { error } = await deleteLoansByApplicationId(applicationId);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 } 

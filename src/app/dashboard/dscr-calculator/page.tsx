@@ -12,6 +12,8 @@ import { DSCRResults } from "@/components/dashboard/dscr-results";
 import { CashToClose } from "@/components/dashboard/cash-to-close";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FileText, ArrowLeft } from "lucide-react";
+import { api } from '@/lib/api-client'
+import { toast } from 'sonner'
 
 interface DSCRResults {
   noi: number;
@@ -284,7 +286,7 @@ function DSCRCalculatorContent() {
     return product;
   };
 
-  const handleCreateApplication = () => {
+  const handleCreateApplication = async () => {
     // Store DSCR calculator data in localStorage to pre-populate the application form
     const dscrData = {
       // Loan Information
@@ -359,6 +361,21 @@ function DSCRCalculatorContent() {
     
     // If we have an applicationId, we're adding a loan to an existing application
     if (applicationId) {
+      // Call the API to create the loan using the API client
+      try {
+        const response = await api.createLoan(applicationId, dscrData);
+        
+        if (response.error) {
+          console.error('Failed to create loan:', response.error);
+          toast.error('Failed to create loan');
+        } else {
+          console.log('Loan created successfully:', response.data);
+          toast.success('Loan created successfully!');
+        }
+      } catch (err) {
+        console.error('Failed to create loan:', err);
+        toast.error('Failed to create loan');
+      }
       // Store the applicationId so we can tie the loan back to it
       localStorage.setItem('targetApplicationId', applicationId);
       // Navigate back to the application with a flag to add the loan

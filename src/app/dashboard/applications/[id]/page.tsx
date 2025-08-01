@@ -49,40 +49,40 @@ export default function ViewApplicationPage() {
 
   const applicationId = params.id as string
 
-  useEffect(() => {
-    const loadApplication = async () => {
-      if (!applicationId) return
+  const loadApplication = async () => {
+    if (!applicationId) return
 
-      setIsLoading(true)
-      try {
-        const result = await api.getApplication(applicationId)
-        
-        if (result.error) {
-          toast.error(result.error || 'Failed to load application')
-          router.push('/dashboard')
-          return
-        }
-
-        const data = result.data as any
-        
-        // Process the nested data structure
-        const processedApplication = {
-          ...data.application,
-          clients: data.application.client_applications?.map((ca: any) => ca.clients).filter(Boolean) || [],
-          companies: data.application.companies || []
-        }
-        
-        setApplication(processedApplication)
-        setEditedApplication(processedApplication)
-      } catch (error) {
-        console.error('Error loading application:', error)
-        toast.error('Failed to load application')
+    setIsLoading(true)
+    try {
+      const result = await api.getApplication(applicationId)
+      
+      if (result.error) {
+        toast.error(result.error || 'Failed to load application')
         router.push('/dashboard')
-      } finally {
-        setIsLoading(false)
+        return
       }
-    }
 
+      const data = result.data as any
+      
+      // Process the nested data structure
+      const processedApplication = {
+        ...data.application,
+        clients: data.application.client_applications?.map((ca: any) => ca.clients).filter(Boolean) || [],
+        companies: data.application.companies || []
+      }
+      
+      setApplication(processedApplication)
+      setEditedApplication(processedApplication)
+    } catch (error) {
+      console.error('Error loading application:', error)
+      toast.error('Failed to load application')
+      router.push('/dashboard')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
     loadApplication()
   }, [applicationId, router])
 
@@ -251,6 +251,54 @@ export default function ViewApplicationPage() {
     router.push(`/dashboard/dscr-calculator?applicationId=${applicationId}`)
   }
 
+  const handleDeleteLoan = async (loanId: string) => {
+    if (!confirm('Are you sure you want to delete this loan? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await api.deleteLoan(applicationId, loanId)
+      
+      if (response.error) {
+        console.error('Failed to delete loan:', response.error)
+        toast.error('Failed to delete loan')
+        return
+      }
+
+      console.log('Loan deleted successfully')
+      toast.success('Loan deleted successfully')
+      // Refresh the application data to show updated loans
+      await loadApplication()
+    } catch (err) {
+      console.error('Failed to delete loan:', err)
+      toast.error('Failed to delete loan')
+    }
+  }
+
+  const handleDeleteAllLoans = async () => {
+    if (!confirm('Are you sure you want to delete ALL loans for this application? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await api.deleteAllLoans(applicationId)
+      
+      if (response.error) {
+        console.error('Failed to delete all loans:', response.error)
+        toast.error('Failed to delete all loans')
+        return
+      }
+
+      console.log('All loans deleted successfully')
+      toast.success('All loans deleted successfully')
+      // Refresh the application data to show updated loans
+      await loadApplication()
+    } catch (err) {
+      console.error('Failed to delete all loans:', err)
+      toast.error('Failed to delete all loans')
+    }
+  }
+
   const toggleClientExpansion = (clientId: string) => {
     setExpandedClients(prev => {
       const newSet = new Set(prev)
@@ -373,6 +421,16 @@ export default function ViewApplicationPage() {
                   <Edit className="h-4 w-4" />
                   Edit
                 </Button>
+                {application.loans && application.loans.length > 0 && (
+                  <Button 
+                    onClick={handleDeleteAllLoans} 
+                    variant="outline" 
+                    className="flex items-center gap-2 text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete All Loans
+                  </Button>
+                )}
                 <Button onClick={handleDelete} variant="outline" className="flex items-center gap-2 text-red-600 hover:text-red-700">
                   <Trash2 className="h-4 w-4" />
                   Delete
@@ -655,13 +713,25 @@ export default function ViewApplicationPage() {
                     Loans ({application.loans?.length || 0})
                   </CardTitle>
                 </div>
-                <Button 
-                  onClick={handleCreateLoan}
-                  className="flex items-center gap-2 bg-visto-gold hover:bg-visto-dark-gold text-white"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create Loan
-                </Button>
+                <div className="flex items-center gap-2">
+                  {application.loans && application.loans.length > 0 && (
+                    <Button 
+                      variant="outline"
+                      onClick={handleDeleteAllLoans}
+                      className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete All
+                    </Button>
+                  )}
+                  <Button 
+                    onClick={handleCreateLoan}
+                    className="flex items-center gap-2 bg-visto-gold hover:bg-visto-dark-gold text-white"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Loan
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -681,6 +751,14 @@ export default function ViewApplicationPage() {
                           >
                             {loan.loan_status}
                           </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteLoan(loan.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                       
