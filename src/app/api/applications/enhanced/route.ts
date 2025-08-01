@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
         .insert({
           client_id: createdClient.id,
           application_id: application.id,
-          client_role
+          client_role: clientRole
         })
 
       if (linkError) {
