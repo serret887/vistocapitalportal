@@ -658,7 +658,7 @@ export default function ViewApplicationPage() {
             </CardHeader>
             <CardContent>
               {application.loans && application.loans.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-4 max-h-96 overflow-auto">
                   {application.loans.map((loan) => (
                     <div key={loan.id} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">

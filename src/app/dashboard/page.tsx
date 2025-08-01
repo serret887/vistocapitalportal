@@ -200,107 +200,102 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 space-y-8 p-8">
+    <div className="flex-1 space-y-3 p-4 h-full flex flex-col">
       {/* Dashboard Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div>
-          <h1 className="text-4xl font-bold visto-dark-blue tracking-tight">
+          <h1 className="text-2xl font-bold visto-dark-blue tracking-tight">
             My Clients
           </h1>
-          <p className="text-xl visto-slate mt-2">
+          <p className="text-sm visto-slate mt-1">
             Manage your Opportunities and track client progress
           </p>
         </div>
         
         <Button
           onClick={() => setShowApplicationForm(true)}
-          className="px-8 py-4 text-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
+          className="px-6 py-2 text-sm bg-primary hover:bg-primary/90 text-primary-foreground font-semibold tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
         >
-          <Plus className="w-5 h-5 mr-3" />
+          <Plus className="w-4 h-4 mr-2" />
           Create New Opportunity
         </Button>
       </div>
 
       {/* Quick Stats Overview */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card className="border-2 border-primary/20 bg-gradient-visto-subtle">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold visto-dark-blue">
-                  Total Clients
-                </CardTitle>
-                <Users className="h-6 w-6 visto-gold" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold visto-dark-blue">
-                {stats.in_review}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="flex-shrink-0">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Card className="border-2 border-primary/20 bg-gradient-visto-subtle">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold visto-dark-blue">
+                    Total Clients
+                  </CardTitle>
+                  <Users className="h-4 w-4 visto-gold" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold visto-dark-blue">
+                  {stats.in_review}
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="border-2 border-green-200 bg-green-50">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold visto-dark-blue">
-                  Total Companies
-                </CardTitle>
-                <Building className="h-6 w-6 text-green-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-700">
-                {stats.approved}
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="border-2 border-green-200 bg-green-50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold visto-dark-blue">
+                    Total Companies
+                  </CardTitle>
+                  <Building className="h-4 w-4 text-green-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-green-700">
+                  {stats.approved}
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="border-2 border-yellow-200 bg-yellow-50">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold visto-dark-blue">
-                  Applications
-                </CardTitle>
-                <DollarSign className="h-6 w-6 text-yellow-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-yellow-700">
-                {stats.ineligible}
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="border-2 border-yellow-200 bg-yellow-50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-semibold visto-dark-blue">
+                    Applications
+                  </CardTitle>
+                  <DollarSign className="h-4 w-4 text-yellow-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-yellow-700">
+                  {stats.ineligible}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
 
-      {/* Status Cards */}
-      {stats && (
-        <div>
-          <h2 className="text-2xl font-semibold visto-dark-blue tracking-tight mb-6">
-            Application Status Overview
-          </h2>
-          {/* StatusCards component was removed, so this section is now empty */}
+      {/* Tables Container */}
+      <div className="flex-1 flex flex-col gap-3 min-h-0">
+        {/* Clients & Companies Table */}
+        <div className="flex-1 min-h-0">
+          <ClientsCompaniesTable
+            onEditClient={handleEditClient}
+            onEditCompany={handleEditCompany}
+            onDeleteClient={handleDeleteClient}
+            onDeleteCompany={handleDeleteCompany}
+          />
         </div>
-      )}
 
-      {/* Clients & Companies Table */}
-      <div>
-        <ClientsCompaniesTable
-          onEditClient={handleEditClient}
-          onEditCompany={handleEditCompany}
-          onDeleteClient={handleDeleteClient}
-          onDeleteCompany={handleDeleteCompany}
-        />
-      </div>
-
-      {/* Applications Table */}
-      <div>
-        <ApplicationsTable
-          onEditApplication={handleEditApplication}
-          onDeleteApplication={handleDeleteApplication}
-          onViewApplication={handleViewApplication}
-        />
+        {/* Applications Table */}
+        <div className="flex-1 min-h-0">
+          <ApplicationsTable
+            onEditApplication={handleEditApplication}
+            onDeleteApplication={handleDeleteApplication}
+            onViewApplication={handleViewApplication}
+          />
+        </div>
       </div>
     </div>
   )

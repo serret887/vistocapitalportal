@@ -50,10 +50,18 @@ export function ApplicationsTable({
   const loadData = async () => {
     setIsLoading(true)
     try {
+      console.log('Loading applications data...')
       const response = await fetch('/api/applications')
+      console.log('Applications response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('Applications data loaded:', data)
         setApplications(data)
+      } else {
+        console.error('Failed to load applications:', response.status, response.statusText)
+        const errorText = await response.text()
+        console.error('Error details:', errorText)
       }
     } catch (error) {
       console.error('Error loading applications:', error)
@@ -103,55 +111,55 @@ export function ApplicationsTable({
   }
 
   return (
-    <Card className="border-2 border-border shadow-2xl">
-      <CardHeader className="pb-6">
+    <Card className="border-2 border-border shadow-2xl h-full flex flex-col">
+      <CardHeader className="pb-3 flex-shrink-0">
         <div>
-          <CardTitle className="text-2xl font-bold visto-dark-blue">
+          <CardTitle className="text-lg font-bold visto-dark-blue">
             Applications & Loans
           </CardTitle>
-          <CardDescription className="text-lg visto-slate">
+          <CardDescription className="text-sm visto-slate">
             Manage your loan applications and their associated loans
           </CardDescription>
         </div>
 
         {/* Search */}
-        <div className="flex flex-col sm:flex-row gap-4 mt-6">
+        <div className="flex flex-col sm:flex-row gap-3 mt-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3" />
             <Input
               placeholder="Search by application name, status, type..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-8 text-sm"
             />
           </div>
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="flex-1 overflow-hidden">
         {isLoading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading applications...</p>
+          <div className="text-center py-6">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-600">Loading applications...</p>
           </div>
         ) : filteredApplications.length === 0 ? (
-          <div className="text-center py-8">
-            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No applications found</h3>
-            <p className="text-gray-600 mb-4">No applications have been created yet</p>
+          <div className="text-center py-6">
+            <FileText className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">No applications found</h3>
+            <p className="text-xs text-gray-600">No applications have been created yet</p>
           </div>
         ) : (
-          <div className="rounded-md border max-h-96 overflow-auto">
+          <div className="rounded-md border h-full overflow-auto">
             <Table>
               <TableHeader className="sticky top-0 bg-white z-10">
                 <TableRow>
-                  <TableHead>Application</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Loans</TableHead>
-                  <TableHead>Total Amount</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-xs">Application</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Type</TableHead>
+                  <TableHead className="text-xs">Loans</TableHead>
+                  <TableHead className="text-xs">Total Amount</TableHead>
+                  <TableHead className="text-xs">Created</TableHead>
+                  <TableHead className="text-right text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -159,13 +167,13 @@ export function ApplicationsTable({
                   <TableRow key={application.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium">
+                        <div className="font-medium text-sm">
                           {application.application_name || 'Unnamed Application'}
                         </div>
                         {application.notes && (
-                          <div className="text-sm text-gray-500 mt-1">
-                            {application.notes.length > 50 
-                              ? `${application.notes.substring(0, 50)}...` 
+                          <div className="text-xs text-gray-500 mt-1">
+                            {application.notes.length > 40 
+                              ? `${application.notes.substring(0, 40)}...` 
                               : application.notes
                             }
                           </div>
@@ -178,12 +186,12 @@ export function ApplicationsTable({
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
+                      <div className="text-xs">
                         {application.application_type?.replace('_', ' ').toUpperCase() || '-'}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
+                      <div className="text-xs">
                         {application.loans?.length || 0} loan{application.loans?.length !== 1 ? 's' : ''}
                       </div>
                       {application.loans && application.loans.length > 0 && (
@@ -192,14 +200,14 @@ export function ApplicationsTable({
                         </div>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs">
                       {application.loans && application.loans.length > 0 
                         ? formatCurrency(getTotalLoanAmount(application.loans))
                         : '-'
                       }
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center gap-1 text-xs">
                         <Calendar className="w-3 h-3 text-gray-500" />
                         {formatDate(application.created_at)}
                       </div>
@@ -207,19 +215,19 @@ export function ApplicationsTable({
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
+                          <Button variant="ghost" className="h-6 w-6 p-0">
                             <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
+                            <MoreHorizontal className="h-3 w-3" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => onViewApplication?.(application)}>
-                            <Eye className="mr-2 h-4 w-4" />
+                            <Eye className="mr-2 h-3 w-3" />
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onEditApplication?.(application)}>
-                            <Edit className="mr-2 h-4 w-4" />
+                            <Edit className="mr-2 h-3 w-3" />
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -227,7 +235,7 @@ export function ApplicationsTable({
                             onClick={() => onDeleteApplication?.(application.id)}
                             className="text-red-600"
                           >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-2 h-3 w-3" />
                             Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
