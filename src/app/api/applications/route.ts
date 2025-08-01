@@ -231,16 +231,7 @@ export async function POST(request: NextRequest) {
         discount_points: formData.dscrData.discountPoints,
         property_zip_code: formData.dscrData.propertyZipCode,
         property_city: formData.dscrData.propertyCity,
-        property_county: formData.dscrData.propertyCounty,
-        property_occupancy: formData.dscrData.propertyOccupancy,
-        property_use: formData.dscrData.propertyUse,
-        property_condition: formData.dscrData.propertyCondition,
-        property_year_built: formData.dscrData.propertyYearBuilt,
-        property_square_footage: formData.dscrData.propertySquareFootage,
-        property_bedrooms: formData.dscrData.propertyBedrooms,
-        property_bathrooms: formData.dscrData.propertyBathrooms,
-        property_lot_size: formData.dscrData.propertyLotSize,
-        property_zoning: formData.dscrData.propertyZoning
+        property_occupancy: formData.dscrData.propertyOccupancy
       }
 
       const { error: loanError } = await serverSupabase
