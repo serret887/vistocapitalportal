@@ -156,7 +156,7 @@ CREATE TABLE loans (
   application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
   loan_name TEXT NOT NULL,
   loan_type TEXT NOT NULL,
-  loan_objective TEXT NOT NULL CHECK (loan_objective IN ('purchase', 'refi', 'cash_out_refi')),
+  loan_objective TEXT NOT NULL CHECK (loan_objective IN ('purchase', 'refi', 'cash_out_refi', 'fix_and_flip')),
   loan_status TEXT NOT NULL DEFAULT 'pending' CHECK (
     loan_status IN ('pending', 'pre_approved', 'approved', 'funded', 'denied', 'withdrawn')
   ),
