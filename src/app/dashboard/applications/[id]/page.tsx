@@ -114,16 +114,7 @@ export default function ViewApplicationPage() {
             property_state: dscrData.property_state || '',
             property_zip_code: dscrData.propertyZipCode || '',
             property_city: dscrData.propertyCity || '',
-            property_county: dscrData.propertyCounty || '',
             property_occupancy: dscrData.propertyOccupancy || 'Investment',
-            property_use: dscrData.propertyUse || 'Rental',
-            property_condition: dscrData.propertyCondition || 'Good',
-            property_year_built: dscrData.propertyYearBuilt || 0,
-            property_square_footage: dscrData.propertySquareFootage || 0,
-            property_bedrooms: dscrData.propertyBedrooms || 0,
-            property_bathrooms: dscrData.propertyBathrooms || 0,
-            property_lot_size: dscrData.propertyLotSize || 0,
-            property_zoning: dscrData.propertyZoning || 'Residential',
             estimated_home_value: dscrData.estimated_home_value || 0,
             purchase_price: dscrData.propertyPurchasePrice || 0,
             loan_amount: dscrData.loan_amount || 0,
@@ -196,7 +187,7 @@ export default function ViewApplicationPage() {
     if (application && searchParams.get('addLoan') === 'true') {
       handleAddLoanFromDSCR()
     }
-  }, [application, applicationId, searchParams])
+  }, [applicationId, searchParams.get('addLoan')]) // Fixed dependency array
 
   const handleEdit = () => {
     setIsEditing(true)
