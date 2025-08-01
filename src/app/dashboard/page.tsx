@@ -1,24 +1,23 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ClientsCompaniesTable } from '@/components/dashboard/clients-companies-table'
 import { ApplicationsTable } from '@/components/dashboard/applications-table'
 import { EnhancedApplicationForm } from '@/components/dashboard/enhanced-application-form'
 import { getDashboardStats } from '@/lib/loan-applications'
-import type { DashboardStats, Client, Company } from '@/types'
-import { Plus, Users, TrendingUp, DollarSign, FileText, Building } from 'lucide-react'
+import type { DashboardStats } from '@/types'
+import { Plus, Users, DollarSign, Building } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
 // Generate a unique request ID for this component instance
 const generateRequestId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-export default function DashboardPage() {
+function DashboardContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [stats, setStats] = useState<DashboardStats | null>(null)
@@ -27,7 +26,7 @@ export default function DashboardPage() {
   const [dataLoaded, setDataLoaded] = useState(false)
   const requestId = useMemo(() => generateRequestId(), [])
 
-  console.log(`[${requestId}] DashboardPage component initialized`)
+  console.log(`[${requestId}] DashboardContent component initialized`)
 
   // Check for query parameter to show application form
   useEffect(() => {
@@ -110,30 +109,6 @@ export default function DashboardPage() {
     toast.success('Application created successfully!')
   }, [loadDashboardData, requestId])
 
-
-
-  const handleEditClient = useCallback((client: Client) => {
-    console.log(`[${requestId}] Edit client clicked`, { clientId: client.id })
-    toast.info('Edit client functionality - Coming soon!')
-  }, [requestId])
-
-  const handleEditCompany = useCallback((company: Company) => {
-    console.log(`[${requestId}] Edit company clicked`, { companyId: company.id })
-    toast.info('Edit company functionality - Coming soon!')
-  }, [requestId])
-
-  const handleDeleteClient = useCallback((clientId: string) => {
-    console.log(`[${requestId}] Delete client clicked`, { clientId })
-    toast.info('Delete client functionality - Coming soon!')
-  }, [requestId])
-
-  const handleDeleteCompany = useCallback((companyId: string) => {
-    console.log(`[${requestId}] Delete company clicked`, { companyId })
-    toast.info('Delete company functionality - Coming soon!')
-  }, [requestId])
-
-
-
   const handleEditApplication = useCallback((application: any) => {
     console.log(`[${requestId}] Edit application clicked`, { applicationId: application.id })
     router.push(`/dashboard/applications/${application.id}/edit`)
@@ -205,10 +180,10 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between flex-shrink-0">
         <div>
           <h1 className="text-2xl font-bold visto-dark-blue tracking-tight">
-            My Clients
+            My Applications
           </h1>
           <p className="text-sm visto-slate mt-1">
-            Manage your Opportunities and track client progress
+            Manage your applications and track progress
           </p>
         </div>
         
@@ -217,7 +192,7 @@ export default function DashboardPage() {
           className="px-6 py-2 text-sm bg-primary hover:bg-primary/90 text-primary-foreground font-semibold tracking-wide transition-all duration-200 shadow-lg hover:shadow-xl"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Create New Opportunity
+          Create New Application
         </Button>
       </div>
 
@@ -229,7 +204,7 @@ export default function DashboardPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold visto-dark-blue">
-                    Total Clients
+                    In Review
                   </CardTitle>
                   <Users className="h-4 w-4 visto-gold" />
                 </div>
@@ -245,7 +220,7 @@ export default function DashboardPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold visto-dark-blue">
-                    Total Companies
+                    Approved
                   </CardTitle>
                   <Building className="h-4 w-4 text-green-600" />
                 </div>
@@ -261,14 +236,14 @@ export default function DashboardPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold visto-dark-blue">
-                    Applications
+                    Total
                   </CardTitle>
                   <DollarSign className="h-4 w-4 text-yellow-600" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-bold text-yellow-700">
-                  {stats.ineligible}
+                  {stats.total}
                 </div>
               </CardContent>
             </Card>
@@ -278,16 +253,6 @@ export default function DashboardPage() {
 
       {/* Tables Container */}
       <div className="flex-1 flex flex-col gap-3 min-h-0">
-        {/* Clients & Companies Table */}
-        <div className="flex-1 min-h-0">
-          <ClientsCompaniesTable
-            onEditClient={handleEditClient}
-            onEditCompany={handleEditCompany}
-            onDeleteClient={handleDeleteClient}
-            onDeleteCompany={handleDeleteCompany}
-          />
-        </div>
-
         {/* Applications Table */}
         <div className="flex-1 min-h-0">
           <ApplicationsTable
@@ -298,5 +263,20 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg visto-slate">Loading dashboard...</p>
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }

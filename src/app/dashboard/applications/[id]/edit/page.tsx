@@ -147,23 +147,7 @@ export default function EditApplicationPage() {
                   has_company: false,
                   company: undefined
                 }],
-                primary_client: {
-                  first_name: application.first_name || '',
-                  last_name: application.last_name || '',
-                  email: application.email || '',
-                  phone_number: application.phone_number || '',
-                  ssn: application.ssn || '',
-                  date_of_birth: application.date_of_birth || '',
-                  current_residence: application.current_residence || '',
-                  total_income: application.total_income || 0,
-                  income_sources: application.income_sources || [],
-                  income_documents: [],
-                  total_assets: application.total_assets || 0,
-                  bank_accounts: application.bank_accounts || [],
-                  bank_statements: [],
-                  has_company: false,
-                  company: undefined
-                }
+
               }}
               isEditing={true}
             />

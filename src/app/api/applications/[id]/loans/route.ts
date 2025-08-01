@@ -306,14 +306,17 @@ export async function POST(
   }
 } 
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest, 
+  { params }: { params: Promise<{ id: string }> }
+) {
   const correlationId = getCorrelationId(request)
+  const { id: applicationId } = await params // Await params here
   
   logRequest(correlationId, request.method, request.url, 
     Object.fromEntries(request.headers.entries()))
 
   try {
-    const { id: applicationId } = params;
     
     const supabase = createServerSupabaseClient()
 
@@ -352,7 +355,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return response
   } catch (error) {
     logError(correlationId, error as Error, {
-      applicationId: params.id,
+      applicationId,
       operation: 'delete_all_loans'
     })
     

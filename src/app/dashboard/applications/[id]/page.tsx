@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -49,7 +49,8 @@ export default function ViewApplicationPage() {
 
   const applicationId = params.id as string
 
-  const loadApplication = async () => {
+  // Wrap loadApplication in useCallback to make it stable
+  const loadApplication = useCallback(async () => {
     if (!applicationId) return
 
     setIsLoading(true)
@@ -82,32 +83,28 @@ export default function ViewApplicationPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [applicationId, router]) // Dependencies for useCallback - removed api since it's stable
 
   useEffect(() => {
     loadApplication()
-  }, [applicationId, router])
+  }, [applicationId, router, loadApplication]) // Added loadApplication to fix exhaustive-deps warning
 
   // Add useEffect to handle loan creation from DSCR calculator
   useEffect(() => {
+    const addLoan = searchParams.get('addLoan') // Extracted complex expression
+
     const handleAddLoanFromDSCR = async () => {
-      const addLoan = searchParams.get('addLoan')
       if (addLoan === 'true') {
-        // The DSCR calculator now handles loan creation directly
-        // Just reload the application to show the new loan
         await loadApplication()
-        
-        // Clear localStorage data
         localStorage.removeItem('dscrCalculatorData')
         localStorage.removeItem('targetApplicationId')
       }
     }
 
-    // Only run this if we have an application loaded
-    if (application && searchParams.get('addLoan') === 'true') {
+    if (application && addLoan === 'true') {
       handleAddLoanFromDSCR()
     }
-  }, [applicationId, searchParams.get('addLoan')]) // Fixed dependency array
+  }, [applicationId, application, loadApplication, searchParams]) // Fixed: removed addLoan from deps since it's defined inside
 
   const handleEdit = () => {
     setIsEditing(true)

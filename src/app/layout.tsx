@@ -26,10 +26,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/favicons/android-chrome-192x192.png" />
-      </head>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >

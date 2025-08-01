@@ -197,15 +197,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/applications/[id] - Delete a specific application
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const correlationId = getCorrelationId(request)
-  
+  const { id } = await params
   logRequest(correlationId, request.method, request.url, 
     Object.fromEntries(request.headers.entries()))
 
   try {
-    logWithCorrelation(correlationId, 'info', 'Deleting application', { applicationId: params.id })
+    logWithCorrelation(correlationId, 'info', 'Deleting application', { applicationId: id })
     
     const { user, error: userError } = await getAuthenticatedUser(request)
     
@@ -227,12 +227,12 @@ export async function DELETE(
     const { error: loansError } = await serverSupabase
       .from('loans')
       .delete()
-      .eq('application_id', params.id)
+      .eq('application_id', id)
 
     if (loansError) {
       logWithCorrelation(correlationId, 'warn', 'Failed to delete associated loans', {
         error: loansError.message,
-        applicationId: params.id
+        applicationId: id
       })
       // Continue with application deletion even if loans deletion fails
     }
@@ -241,12 +241,12 @@ export async function DELETE(
     const { error: clientAppsError } = await serverSupabase
       .from('client_applications')
       .delete()
-      .eq('application_id', params.id)
+      .eq('application_id', id)
 
     if (clientAppsError) {
       logWithCorrelation(correlationId, 'warn', 'Failed to delete associated client applications', {
         error: clientAppsError.message,
-        applicationId: params.id
+        applicationId: id
       })
       // Continue with application deletion even if client applications deletion fails
     }
@@ -255,12 +255,12 @@ export async function DELETE(
     const { error: conditionsError } = await serverSupabase
       .from('application_conditions')
       .delete()
-      .eq('application_id', params.id)
+      .eq('application_id', id)
 
     if (conditionsError) {
       logWithCorrelation(correlationId, 'warn', 'Failed to delete associated conditions', {
         error: conditionsError.message,
-        applicationId: params.id
+        applicationId: id
       })
       // Continue with application deletion even if conditions deletion fails
     }
@@ -269,13 +269,13 @@ export async function DELETE(
     const { error } = await serverSupabase
       .from('applications')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('user_id', user.id) // Ensure user can only delete their own applications
 
     if (error) {
       logWithCorrelation(correlationId, 'error', 'Failed to delete application', {
         error: error.message,
-        applicationId: params.id,
+        applicationId: id,
         userId: user.id
       })
       
@@ -289,7 +289,7 @@ export async function DELETE(
     }
 
     logWithCorrelation(correlationId, 'info', 'Application deleted successfully', {
-      applicationId: params.id,
+      applicationId: id,
       userId: user.id
     })
 
