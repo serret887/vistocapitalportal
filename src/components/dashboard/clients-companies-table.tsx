@@ -109,8 +109,6 @@ export function ClientsCompaniesTable({
               Manage your clients and companies
             </CardDescription>
           </div>
-          
-
         </div>
 
         {/* Search and Filters */}
@@ -153,9 +151,9 @@ export function ClientsCompaniesTable({
                 <p className="text-gray-600 mb-4">No clients found</p>
               </div>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-md border max-h-96 overflow-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="sticky top-0 bg-white z-10">
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Contact</TableHead>
@@ -252,9 +250,9 @@ export function ClientsCompaniesTable({
                 <p className="text-gray-600 mb-4">No companies found</p>
               </div>
             ) : (
-              <div className="rounded-md border">
+              <div className="rounded-md border max-h-96 overflow-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="sticky top-0 bg-white z-10">
                     <TableRow>
                       <TableHead>Company Name</TableHead>
                       <TableHead>Type</TableHead>

@@ -284,15 +284,15 @@ export default function DashboardPage() {
         </div>
       )}
 
-                   {/* Clients & Companies Table */}
-             <div>
-               <ClientsCompaniesTable
-                 onEditClient={handleEditClient}
-                 onEditCompany={handleEditCompany}
-                 onDeleteClient={handleDeleteClient}
-                 onDeleteCompany={handleDeleteCompany}
-               />
-             </div>
+      {/* Clients & Companies Table */}
+      <div>
+        <ClientsCompaniesTable
+          onEditClient={handleEditClient}
+          onEditCompany={handleEditCompany}
+          onDeleteClient={handleDeleteClient}
+          onDeleteCompany={handleDeleteCompany}
+        />
+      </div>
 
       {/* Applications Table */}
       <div>
@@ -302,8 +302,6 @@ export default function DashboardPage() {
           onViewApplication={handleViewApplication}
         />
       </div>
-
-
     </div>
   )
 }

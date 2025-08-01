@@ -141,9 +141,9 @@ export function ApplicationsTable({
             <p className="text-gray-600 mb-4">No applications have been created yet</p>
           </div>
         ) : (
-          <div className="rounded-md border">
+          <div className="rounded-md border max-h-96 overflow-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 bg-white z-10">
                 <TableRow>
                   <TableHead>Application</TableHead>
                   <TableHead>Status</TableHead>
