@@ -91,95 +91,13 @@ export default function ViewApplicationPage() {
     const handleAddLoanFromDSCR = async () => {
       const addLoan = searchParams.get('addLoan')
       if (addLoan === 'true') {
-        try {
-          // Get DSCR data from localStorage
-          const dscrDataString = localStorage.getItem('dscrCalculatorData')
-          const targetApplicationId = localStorage.getItem('targetApplicationId')
-          
-          if (!dscrDataString || targetApplicationId !== applicationId) {
-            console.log('No DSCR data found or application ID mismatch')
-            return
-          }
-
-          const dscrData = JSON.parse(dscrDataString)
-          console.log('Processing DSCR data for loan creation:', dscrData)
-
-          // Create loan data from DSCR data
-          const loanData = {
-            loan_name: `${dscrData.selected_loan?.product || 'DSCR Loan'} - ${dscrData.property_type || 'Property'}`,
-            loan_type: dscrData.loan_type || 'dscr',
-            loan_objective: dscrData.loan_objective || 'purchase',
-            property_address: dscrData.property_address || '',
-            property_type: dscrData.property_type || '',
-            property_state: dscrData.property_state || '',
-            property_zip_code: dscrData.propertyZipCode || '',
-            property_city: dscrData.propertyCity || '',
-            property_occupancy: dscrData.propertyOccupancy || 'Investment',
-            estimated_home_value: dscrData.estimated_home_value || 0,
-            purchase_price: dscrData.propertyPurchasePrice || 0,
-            loan_amount: dscrData.loan_amount || 0,
-            down_payment_percentage: dscrData.down_payment_percentage || 0,
-            closing_costs: dscrData.propertyClosingCosts || 0,
-            seller_concessions: dscrData.propertySellerConcessions || 0,
-            repairs_improvements: dscrData.propertyRepairsImprovements || 0,
-            reserves: dscrData.propertyReserves || 0,
-            monthly_rental_income: dscrData.monthly_rental_income || 0,
-            annual_property_insurance: dscrData.annual_property_insurance || 0,
-            annual_property_taxes: dscrData.annual_property_taxes || 0,
-            monthly_hoa_fee: dscrData.monthly_hoa_fee || 0,
-            monthly_mortgage_payment: dscrData.selected_loan?.monthlyPayment || 0,
-            noi: dscrData.dscr_results?.noi || 0,
-            dscr_ratio: dscrData.dscr_results?.dscr || 0,
-            cash_flow: dscrData.dscr_results?.cashFlow || 0,
-            interest_rate: dscrData.selected_loan?.rate || 0,
-            loan_term_years: dscrData.selected_loan?.term || 30,
-            prepayment_penalty: dscrData.prepaymentPenalty || '',
-            discount_points: dscrData.discountPoints || 0,
-            fico_score_range: dscrData.ficoScoreRange || '',
-            broker_points: dscrData.broker_points || 0,
-            broker_admin_fee: dscrData.broker_admin_fee || 0,
-            broker_ysp: dscrData.broker_ysp || 0,
-            lender_name: dscrData.selected_loan?.lender || '',
-            loan_product: dscrData.selected_loan?.product || '',
-            selected_loan_product: dscrData.selected_loan || null,
-            flood_insurance: dscrData.propertyFloodInsurance || 0,
-            hazard_insurance: dscrData.propertyHazardInsurance || dscrData.annual_property_insurance || 0,
-            title_insurance: dscrData.propertyTitleInsurance || 0,
-            survey_fees: dscrData.propertySurveyFees || 0,
-            recording_fees: dscrData.propertyRecordingFees || 0,
-            transfer_taxes: dscrData.propertyTransferTaxes || 0,
-            other_costs: dscrData.propertyOtherCosts || 0,
-            is_short_term_rental: dscrData.is_short_term_rental || false,
-            escrow_accounts: dscrData.propertyEscrowAccounts || false,
-            loan_data: dscrData,
-            notes: `Created from DSCR calculator data`
-          }
-
-          console.log('Creating loan with data:', loanData)
-
-          // Create the loan
-          const result = await createLoan(applicationId, loanData)
-          
-          if (result.error) {
-            console.error('Failed to create loan:', result.error)
-            toast.error(`Failed to create loan: ${result.error}`)
-            return
-          }
-
-          console.log('Loan created successfully:', result.loan)
-          toast.success('Loan created successfully!')
-
-          // Clear localStorage data
-          localStorage.removeItem('dscrCalculatorData')
-          localStorage.removeItem('targetApplicationId')
-
-          // Reload the application to show the new loan
-          window.location.reload()
-
-        } catch (error) {
-          console.error('Error creating loan from DSCR data:', error)
-          toast.error('Failed to create loan from DSCR data')
-        }
+        // The DSCR calculator now handles loan creation directly
+        // Just reload the application to show the new loan
+        await loadApplication()
+        
+        // Clear localStorage data
+        localStorage.removeItem('dscrCalculatorData')
+        localStorage.removeItem('targetApplicationId')
       }
     }
 
