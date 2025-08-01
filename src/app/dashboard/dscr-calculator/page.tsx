@@ -14,6 +14,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FileText, ArrowLeft } from "lucide-react";
 import { api } from '@/lib/api-client'
 import { toast } from 'sonner'
+import type { PricingResult } from '@/lib/types/pricing'
 
 interface DSCRResults {
   noi: number;
@@ -106,8 +107,8 @@ function DSCRCalculatorContent() {
     units: 1
   });
 
-  const [loanOptions, setLoanOptions] = useState<LoanOption[]>([]);
-  const [selectedLoan, setSelectedLoan] = useState<LoanOption | null>(null);
+  const [loanOptions, setLoanOptions] = useState<PricingResult[]>([]);
+  const [selectedLoan, setSelectedLoan] = useState<PricingResult | null>(null);
   const [dscrResults, setDscrResults] = useState<DSCRResults | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [needsRecalculation, setNeedsRecalculation] = useState(false);
@@ -243,7 +244,7 @@ function DSCRCalculatorContent() {
     }
   };
 
-  const handleLoanSelect = (loan: LoanOption) => {
+  const handleLoanSelect = (loan: PricingResult) => {
       setSelectedLoan(loan);
     setNeedsRecalculation(false);
   };
@@ -290,16 +291,21 @@ function DSCRCalculatorContent() {
     // Store DSCR calculator data in localStorage to pre-populate the application form
     const dscrData = {
       // Loan Information
+      loan_name: `${formData.transactionType === 'purchase' ? 'Purchase' : 'Refinance'} - ${formData.propertyType}`,
+      loan_type: 'dscr',
       loan_objective: formData.transactionType === 'purchase' ? 'purchase' : 'refi',
-      loan_type: 'dscr', // This is a DSCR loan
       
       // Property Information
       property_type: formData.propertyType,
       property_address: '', // Will be filled in application form
-      property_is_tbd: false,
+      property_state: formData.propertyState,
+      property_zip_code: '', // Will be filled in application form
+      property_city: '', // Will be filled in application form
+      property_occupancy: 'Investment', // Default for DSCR loans
       
       // Financial Information
       estimated_home_value: formData.estimatedHomeValue,
+      purchase_price: formData.estimatedHomeValue,
       loan_amount: formData.loanAmount,
       down_payment_percentage: formData.downPayment,
       monthly_rental_income: formData.monthlyRentalIncome,
@@ -308,52 +314,51 @@ function DSCRCalculatorContent() {
       monthly_hoa_fee: formData.monthlyHoaFee,
       is_short_term_rental: formData.isShortTermRental,
       
-      // Selected Loan Details
-      selected_loan: selectedLoan,
-      dscr_results: dscrResults,
+      // DSCR Results
+      noi: dscrResults?.noi || 0,
+      dscr_ratio: dscrResults?.dscr || 0,
+      cash_flow: dscrResults?.cashFlow || 0,
       
-      // Broker Information
+      // Loan Terms
+      interest_rate: selectedLoan?.finalRate || 0,
+      loan_term_years: selectedLoan?.termYears || 30,
+      monthly_mortgage_payment: selectedLoan?.monthlyPayment || 0,
+      
+      // Additional Fields
+      prepayment_penalty: formData.prepaymentPenalty,
+      discount_points: formData.discountPoints,
+      fico_score_range: formData.ficoScore,
       broker_points: formData.brokerPoints,
       broker_admin_fee: formData.brokerAdminFee,
       broker_ysp: formData.brokerYsp,
+      lender_name: selectedLoan?.lenderName || '',
+      loan_product: selectedLoan?.product || '',
+      selected_loan_product: selectedLoan,
       
-      // Property State
-      property_state: formData.propertyState,
+      // Default values for required fields
+      closing_costs: 0,
+      seller_concessions: 0,
+      repairs_improvements: 0,
+      reserves: 0,
+      down_payment_amount: 0,
+      flood_insurance: 0,
+      hazard_insurance: formData.annualPropertyInsurance,
+      title_insurance: 0,
+      survey_fees: 0,
+      recording_fees: 0,
+      transfer_taxes: 0,
+      other_costs: 0,
+      escrow_accounts: false,
       
-      // Additional DSCR Fields for API
-      ficoScoreRange: formData.ficoScore,
-      prepaymentPenalty: formData.prepaymentPenalty,
-      discountPoints: formData.discountPoints,
-      transactionType: formData.transactionType,
-      propertyZipCode: '', // Will be filled in application form
-      propertyCity: '', // Will be filled in application form
-      propertyCounty: '', // Will be filled in application form
-      propertyOccupancy: 'Investment', // Default for DSCR loans
-      propertyUse: 'Rental', // Default for DSCR loans
-      propertyCondition: 'Good', // Default assumption
-      propertyYearBuilt: 0, // Will be filled in application form
-      propertySquareFootage: 0, // Will be filled in application form
-      propertyBedrooms: 0, // Will be filled in application form
-      propertyBathrooms: 0, // Will be filled in application form
-      propertyLotSize: 0, // Will be filled in application form
-      propertyZoning: 'Residential', // Default assumption
-      propertyAppraisalValue: formData.estimatedHomeValue,
-      propertyPurchasePrice: formData.estimatedHomeValue,
-      propertySellerConcessions: 0, // Will be filled in application form
-      propertyClosingCosts: 0, // Will be filled in application form
-      propertyRepairsImprovements: 0, // Will be filled in application form
-      propertyReserves: 0, // Will be filled in application form
-      propertyEscrowAccounts: false, // Default assumption
-      propertyFloodInsurance: 0, // Will be filled in application form
-      propertyHazardInsurance: formData.annualPropertyInsurance,
-      propertyTitleInsurance: 0, // Will be filled in application form
-      propertySurveyFees: 0, // Will be filled in application form
-      propertyRecordingFees: 0, // Will be filled in application form
-      propertyTransferTaxes: 0, // Will be filled in application form
-      propertyOtherCosts: 0, // Will be filled in application form
+      // Store full data in loan_data JSONB field
+      loan_data: {
+        formData,
+        dscrResults,
+        selectedLoan,
+        timestamp: new Date().toISOString()
+      },
       
-      // Timestamp
-      timestamp: new Date().toISOString()
+      notes: `Created from DSCR calculator data`
     };
     
     // Store the data
